@@ -1,2 +1,2 @@
 # UnsafeDelegate
-And function pointer to .NET Standard 2.0
+Add function pointer to .NET Standard 2.0
