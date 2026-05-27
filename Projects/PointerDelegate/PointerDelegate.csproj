@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	<RootNamespace>Mod.LowLevel</RootNamespace>
+  </PropertyGroup>
+
+  <Target Name="CopyToRoot" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildProjectDirectory)\..\..\" />
+  </Target>
+
+</Project>
