@@ -188,7 +188,7 @@ namespace Generator
             var module = asm.MainModule;
 
             var refParamType = module.GetType("Mod.LowLevel.RefParam");
-            var baseType = module.GetType("Mod.LowLevel.PointerDelegateBase");
+            var baseType = module.GetType("Mod.LowLevel.PointerDelegate");
             var pfnField = baseType.GetField("_Pfn");
             var isRefParamMethod = baseType.GetMethod("IsRefParam").GetReference(module);
 
