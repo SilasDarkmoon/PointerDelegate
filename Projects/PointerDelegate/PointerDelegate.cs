@@ -44,9 +44,12 @@ namespace Mod.LowLevel
     /// <summary>
     /// Use this to indicate an parameter is a by-ref parameter.
     /// </summary>
-    public abstract class ByRefParam { }
+    public sealed class ByRefParam
+    {
+        private ByRefParam() { }
+    }
 
-    public abstract class PointerDelegate : ICloneable
+    public abstract class PointerDelegate : ICloneable, IFreeInvokable
     {
         protected IntPtr _Pfn;
         protected PointerDelegate(IntPtr fn)
@@ -145,7 +148,7 @@ namespace Mod.LowLevel
             return MemberwiseClone();
         }
     }
-    public class PointerAction : PointerDelegate
+    public class PointerAction : PointerDelegate, IFreeInvokableAction
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action del) : base(del) { }
@@ -158,7 +161,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction;
         }
     }
-    public class PointerAction<U1> : PointerDelegate
+    public class PointerAction<U1> : PointerDelegate, IFreeInvokableAction1
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1> del) : base(del) { }
@@ -180,7 +183,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1>;
         }
     }
-    public class PointerAction<U1, U2> : PointerDelegate
+    public class PointerAction<U1, U2> : PointerDelegate, IFreeInvokableAction2
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2> del) : base(del) { }
@@ -203,7 +206,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2>;
         }
     }
-    public class PointerAction<U1, U2, U3> : PointerDelegate
+    public class PointerAction<U1, U2, U3> : PointerDelegate, IFreeInvokableAction3
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3> del) : base(del) { }
@@ -227,7 +230,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4> : PointerDelegate, IFreeInvokableAction4
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4> del) : base(del) { }
@@ -252,7 +255,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5> : PointerDelegate, IFreeInvokableAction5
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5> del) : base(del) { }
@@ -278,7 +281,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6> : PointerDelegate, IFreeInvokableAction6
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6> del) : base(del) { }
@@ -305,7 +308,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5, U6>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6, U7> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6, U7> : PointerDelegate, IFreeInvokableAction7
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7> del) : base(del) { }
@@ -333,7 +336,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5, U6, U7>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8> : PointerDelegate, IFreeInvokableAction8
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8> del) : base(del) { }
@@ -362,7 +365,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5, U6, U7, U8>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9> : PointerDelegate, IFreeInvokableAction9
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9> del) : base(del) { }
@@ -392,7 +395,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : PointerDelegate, IFreeInvokableAction10
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> del) : base(del) { }
@@ -423,7 +426,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : PointerDelegate, IFreeInvokableAction11
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> del) : base(del) { }
@@ -455,7 +458,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : PointerDelegate, IFreeInvokableAction12
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> del) : base(del) { }
@@ -488,7 +491,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : PointerDelegate, IFreeInvokableAction13
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> del) : base(del) { }
@@ -522,7 +525,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : PointerDelegate, IFreeInvokableAction14
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> del) : base(del) { }
@@ -557,7 +560,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : PointerDelegate, IFreeInvokableAction15
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> del) : base(del) { }
@@ -593,7 +596,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>;
         }
     }
-    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : PointerDelegate
+    public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : PointerDelegate, IFreeInvokableAction16
     {
         public PointerAction(IntPtr fn) : base(fn) { }
         public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> del) : base(del) { }
@@ -631,7 +634,7 @@ namespace Mod.LowLevel
         }
     }
 
-    public class PointerFunc<R> : PointerDelegate
+    public class PointerFunc<R> : PointerDelegate, IFreeInvokableFunc<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<R> del) : base(del) { }
@@ -644,7 +647,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R>;
         }
     }
-    public class PointerFunc<R, U1> : PointerDelegate
+    public class PointerFunc<R, U1> : PointerDelegate, IFreeInvokableFunc1<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, R> del) : base(del) { }
@@ -666,7 +669,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1>;
         }
     }
-    public class PointerFunc<R, U1, U2> : PointerDelegate
+    public class PointerFunc<R, U1, U2> : PointerDelegate, IFreeInvokableFunc2<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, R> del) : base(del) { }
@@ -689,7 +692,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3> : PointerDelegate, IFreeInvokableFunc3<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, R> del) : base(del) { }
@@ -713,7 +716,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4> : PointerDelegate, IFreeInvokableFunc4<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, R> del) : base(del) { }
@@ -738,7 +741,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5> : PointerDelegate, IFreeInvokableFunc5<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, R> del) : base(del) { }
@@ -764,7 +767,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6> : PointerDelegate, IFreeInvokableFunc6<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, R> del) : base(del) { }
@@ -791,7 +794,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> : PointerDelegate, IFreeInvokableFunc7<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, R> del) : base(del) { }
@@ -819,7 +822,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : PointerDelegate, IFreeInvokableFunc8<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, R> del) : base(del) { }
@@ -848,7 +851,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : PointerDelegate, IFreeInvokableFunc9<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> del) : base(del) { }
@@ -878,7 +881,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : PointerDelegate, IFreeInvokableFunc10<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> del) : base(del) { }
@@ -909,7 +912,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : PointerDelegate, IFreeInvokableFunc11<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> del) : base(del) { }
@@ -941,7 +944,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : PointerDelegate, IFreeInvokableFunc12<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> del) : base(del) { }
@@ -974,7 +977,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : PointerDelegate, IFreeInvokableFunc13<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> del) : base(del) { }
@@ -1008,7 +1011,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : PointerDelegate, IFreeInvokableFunc14<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> del) : base(del) { }
@@ -1043,7 +1046,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : PointerDelegate, IFreeInvokableFunc15<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> del) : base(del) { }
@@ -1079,7 +1082,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : PointerDelegate
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : PointerDelegate, IFreeInvokableFunc16<R>
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
         public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> del) : base(del) { }
@@ -1117,7 +1120,7 @@ namespace Mod.LowLevel
         }
     }
 
-    public class PointerRefFunc<R> : PointerDelegate
+    public class PointerRefFunc<R> : PointerDelegate, IFreeInvokableRefFunc<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R> del) : base(del) { }
@@ -1130,7 +1133,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R>;
         }
     }
-    public class PointerRefFunc<R, U1> : PointerDelegate
+    public class PointerRefFunc<R, U1> : PointerDelegate, IFreeInvokableRefFunc1<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1> del) : base(del) { }
@@ -1152,7 +1155,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1>;
         }
     }
-    public class PointerRefFunc<R, U1, U2> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2> : PointerDelegate, IFreeInvokableRefFunc2<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2> del) : base(del) { }
@@ -1175,7 +1178,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3> : PointerDelegate, IFreeInvokableRefFunc3<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3> del) : base(del) { }
@@ -1199,7 +1202,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4> : PointerDelegate, IFreeInvokableRefFunc4<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4> del) : base(del) { }
@@ -1224,7 +1227,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5> : PointerDelegate, IFreeInvokableRefFunc5<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5> del) : base(del) { }
@@ -1250,7 +1253,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6> : PointerDelegate, IFreeInvokableRefFunc6<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6> del) : base(del) { }
@@ -1277,7 +1280,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7> : PointerDelegate, IFreeInvokableRefFunc7<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7> del) : base(del) { }
@@ -1305,7 +1308,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : PointerDelegate, IFreeInvokableRefFunc8<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> del) : base(del) { }
@@ -1334,7 +1337,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : PointerDelegate, IFreeInvokableRefFunc9<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> del) : base(del) { }
@@ -1364,7 +1367,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : PointerDelegate, IFreeInvokableRefFunc10<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> del) : base(del) { }
@@ -1395,7 +1398,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : PointerDelegate, IFreeInvokableRefFunc11<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> del) : base(del) { }
@@ -1427,7 +1430,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : PointerDelegate, IFreeInvokableRefFunc12<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> del) : base(del) { }
@@ -1460,7 +1463,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : PointerDelegate, IFreeInvokableRefFunc13<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> del) : base(del) { }
@@ -1494,7 +1497,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : PointerDelegate, IFreeInvokableRefFunc14<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> del) : base(del) { }
@@ -1529,7 +1532,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : PointerDelegate, IFreeInvokableRefFunc15<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> del) : base(del) { }
@@ -1565,7 +1568,7 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>;
         }
     }
-    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : PointerDelegate
+    public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : PointerDelegate, IFreeInvokableRefFunc16<R>
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
         public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> del) : base(del) { }
