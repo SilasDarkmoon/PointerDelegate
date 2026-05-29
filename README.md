@@ -38,6 +38,8 @@ For example, for "static IntPtr TestFunc1(ref int p)" we should choose PointerFu
             var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
 ```
 
+Instead of function pointer (e.g. on Unity IL2CPP, it is impossible to get a func pointer), you can also simply wrap a system delegate using constructor ```PointerFunc<IntPtr, IntPtr>(Func<IntPtr, IntPtr> del)```
+
 4) ```Invoke(...)``` and ```Invoke<...>(...)```
 
 Like normal delegates there is an Invoke method to call the func. (But there is no "del(...)" syntactic sugar).
@@ -60,7 +62,11 @@ We can clone the PointerDelegate, and WithRefParam() on new instance. (The Clone
             var invoker1_3 = invoker1.Clone().WithRefParam(0, false);
 ```
 
-6) What is the underlayer of it? How does it convert parameters.
+6) Use ByRefParam to force a parameter to be a ref
+
+If you provide ByRefParam as the generic parameter, e.g ```new PointerFunc<IntPtr, ByRefParam>```, the corresponding parameter will always be treated as taking a ref XXX.
+
+7) What is the underlayer of it? How does it convert parameters.
 
 In IL, the Invoke(...) just:
 
@@ -130,6 +136,12 @@ is:
 300
 ```
 
+8) Provide calling parameter's types using PointerDelegateInvoker
+
+If you need to specify each parameter's type before calling the PointerDelegate, you can use PointerDelegateInvoker to wrap it.
+
+For example, ```PointerFuncInvoker<int, ByRefParam, uint>```, the first generic parameter (int) means the return is an int value. The second generic parameter (ByRefParam) means the underlying is ByRefParam. And the last generic parameter (uint) means you want to call this with a "ref uint".
+
 # 中文说明
 
 为.NET Standard 2.0添加函数指针类似功能。并能实现类似```Action<ref int>```的泛型。
@@ -171,6 +183,8 @@ PointerDelegate 有三种类型：PointerAction - 无返回值，PointerFunc - �
             var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
 ```
 
+如果不方便拿到指针（比如Unity IL2CPP平台），你可以简单包装一个系统的委托对象，例如使用如下的构造函数：```PointerFunc<IntPtr, IntPtr>(Func<IntPtr, IntPtr> del)```
+
 4) ```Invoke(...)``` 和 ```Invoke<...>(...)```
 
 和普通委托一样，有一个 Invoke 方法来调用函数。（但没有 "del(...)" 的语法糖）。
@@ -193,7 +207,11 @@ PointerDelegate 有三种类型：PointerAction - 无返回值，PointerFunc - �
             var invoker1_3 = invoker1.Clone().WithRefParam(0, false);
 ```
 
-6) 它的底层原理是什么？它是如何转换参数的。
+6) 指定ByRefParam作为泛型参数以强制该参数使用ref
+
+如果你指定ByRefParam作为泛型参数，例如```new PointerFunc<IntPtr, ByRefParam>```，相应的参数将直接被认为需要使用"ref XXX"作为参数。
+
+7) 它的底层原理是什么？它是如何转换参数的。
 
 在 IL 层面，Invoke(...) 只是：
 
@@ -263,3 +281,7 @@ IsRefParam(...) 首先检查你是否已显式指定了该参数是引用还是�
 300
 ```
 
+8) 可以在创建时就指定好调用参数的类型
+
+如果你需要在调用之前就为每个参数确定下来调用参数的类型，你可以使用PointerDelegateInvoker包装一下。
+例如```PointerFuncInvoker<int, ByRefParam, uint>```，第一个泛型参数（int）意味着它会返回一个int值。第二个泛型参数（ByRefParam）意味着底层方法需要接收一个引用。最后，第三个泛型参数（uint）意味着你会使用"ref uint"来调用这个委托而不是别的其他的"ref XXX"。

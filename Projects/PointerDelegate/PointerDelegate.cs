@@ -41,12 +41,22 @@ namespace Mod.LowLevel
         }
     }
 
+    /// <summary>
+    /// Use this to indicate an parameter is a by-ref parameter.
+    /// </summary>
+    public abstract class ByRefParam { }
+
     public abstract class PointerDelegate : ICloneable
     {
         protected IntPtr _Pfn;
         protected PointerDelegate(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        protected Delegate _Del;
+        protected PointerDelegate(Delegate del)
+        {
+            _Del = del;
         }
 
         protected uint _RefParamFlags;
@@ -82,7 +92,53 @@ namespace Mod.LowLevel
         {
             bool? refFlag = GetRefParamFlag(paramIndex);
             if (refFlag.HasValue) return refFlag.Value;
+            if (ut == typeof(ByRefParam))
+            {
+                SetRefParamFlag(paramIndex, true);
+                return true;
+            }
             return ut == typeof(IntPtr) && pt != typeof(IntPtr);
+        }
+        //protected enum RefParamCategory
+        //{
+        //    Val = 0,
+        //    Ref = 1,
+        //    Obj = 2,
+        //}
+        protected int GetRefParamCategory<U, P>(int paramIndex)
+        {
+            bool? refFlag = GetRefParamFlag(paramIndex);
+            var ut = typeof(U);
+            var nt = typeof(IntPtr);
+            if (refFlag.HasValue)
+            {
+                if (refFlag.Value)
+                {
+                    if (ut == nt)
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 2;
+                    }
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+            var ot = typeof(ByRefParam);
+            if (ut == ot)
+            {
+                SetRefParamFlag(paramIndex, true);
+                return 2;
+            }
+            if (ut == nt && typeof(P) != nt)
+            {
+                return 1;
+            }
+            return 0;
         }
         object ICloneable.Clone()
         {
@@ -92,6 +148,7 @@ namespace Mod.LowLevel
     public class PointerAction : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action del) : base(del) { }
         public void Invoke()
         {
             throw new NotImplementedException();
@@ -104,6 +161,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1> del) : base(del) { }
         public void Invoke(U1 p1)
         {
             throw new NotImplementedException();
@@ -125,6 +183,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2)
         {
             throw new NotImplementedException();
@@ -147,6 +206,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3)
         {
             throw new NotImplementedException();
@@ -170,6 +230,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
         {
             throw new NotImplementedException();
@@ -194,6 +255,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
         {
             throw new NotImplementedException();
@@ -219,6 +281,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
         {
             throw new NotImplementedException();
@@ -245,6 +308,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6, U7> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
         {
             throw new NotImplementedException();
@@ -272,6 +336,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
         {
             throw new NotImplementedException();
@@ -300,6 +365,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
         {
             throw new NotImplementedException();
@@ -329,6 +395,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
         {
             throw new NotImplementedException();
@@ -359,6 +426,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
         {
             throw new NotImplementedException();
@@ -390,6 +458,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
         {
             throw new NotImplementedException();
@@ -422,6 +491,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
         {
             throw new NotImplementedException();
@@ -455,6 +525,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
         {
             throw new NotImplementedException();
@@ -489,6 +560,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
         {
             throw new NotImplementedException();
@@ -524,6 +596,7 @@ namespace Mod.LowLevel
     public class PointerAction<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : PointerDelegate
     {
         public PointerAction(IntPtr fn) : base(fn) { }
+        public PointerAction(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> del) : base(del) { }
         public void Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
         {
             throw new NotImplementedException();
@@ -561,6 +634,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<R> del) : base(del) { }
         public R Invoke()
         {
             throw new NotImplementedException();
@@ -573,6 +647,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, R> del) : base(del) { }
         public R Invoke(U1 p1)
         {
             throw new NotImplementedException();
@@ -594,6 +669,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2)
         {
             throw new NotImplementedException();
@@ -616,6 +692,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3)
         {
             throw new NotImplementedException();
@@ -639,6 +716,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
         {
             throw new NotImplementedException();
@@ -663,6 +741,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
         {
             throw new NotImplementedException();
@@ -688,6 +767,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
         {
             throw new NotImplementedException();
@@ -714,6 +794,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
         {
             throw new NotImplementedException();
@@ -741,6 +822,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
         {
             throw new NotImplementedException();
@@ -769,6 +851,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
         {
             throw new NotImplementedException();
@@ -798,6 +881,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
         {
             throw new NotImplementedException();
@@ -828,6 +912,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
         {
             throw new NotImplementedException();
@@ -859,6 +944,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
         {
             throw new NotImplementedException();
@@ -891,6 +977,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
         {
             throw new NotImplementedException();
@@ -924,6 +1011,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
         {
             throw new NotImplementedException();
@@ -958,6 +1046,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
         {
             throw new NotImplementedException();
@@ -993,6 +1082,7 @@ namespace Mod.LowLevel
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : PointerDelegate
     {
         public PointerFunc(IntPtr fn) : base(fn) { }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> del) : base(del) { }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
         {
             throw new NotImplementedException();
@@ -1030,6 +1120,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R> del) : base(del) { }
         public ref R Invoke()
         {
             throw new NotImplementedException();
@@ -1042,6 +1133,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1> del) : base(del) { }
         public ref R Invoke(U1 p1)
         {
             throw new NotImplementedException();
@@ -1063,6 +1155,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2)
         {
             throw new NotImplementedException();
@@ -1085,6 +1178,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3)
         {
             throw new NotImplementedException();
@@ -1108,6 +1202,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
         {
             throw new NotImplementedException();
@@ -1132,6 +1227,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
         {
             throw new NotImplementedException();
@@ -1157,6 +1253,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
         {
             throw new NotImplementedException();
@@ -1183,6 +1280,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
         {
             throw new NotImplementedException();
@@ -1210,6 +1308,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
         {
             throw new NotImplementedException();
@@ -1238,6 +1337,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
         {
             throw new NotImplementedException();
@@ -1267,6 +1367,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
         {
             throw new NotImplementedException();
@@ -1297,6 +1398,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
         {
             throw new NotImplementedException();
@@ -1328,6 +1430,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
         {
             throw new NotImplementedException();
@@ -1360,6 +1463,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
         {
             throw new NotImplementedException();
@@ -1393,6 +1497,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
         {
             throw new NotImplementedException();
@@ -1427,6 +1532,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
         {
             throw new NotImplementedException();
@@ -1462,6 +1568,7 @@ namespace Mod.LowLevel
     public class PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : PointerDelegate
     {
         public PointerRefFunc(IntPtr fn) : base(fn) { }
+        public PointerRefFunc(RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> del) : base(del) { }
         public ref R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
         {
             throw new NotImplementedException();
@@ -1495,4 +1602,22 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerRefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>;
         }
     }
+
+    public delegate ref R RefFunc<R>();
+    public delegate ref R RefFunc<R, U1>(U1 p1);
+    public delegate ref R RefFunc<R, U1, U2>(U1 p1, U2 p2);
+    public delegate ref R RefFunc<R, U1, U2, U3>(U1 p1, U2 p2, U3 p3);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4>(U1 p1, U2 p2, U3 p3, U4 p4);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6, U7>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15);
+    public delegate ref R RefFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16);
 }
