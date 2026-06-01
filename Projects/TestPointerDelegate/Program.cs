@@ -68,6 +68,26 @@ namespace TestPointerDelegate
                 Console.WriteLine(invoker1_3.Invoke(b));
                 Console.WriteLine("------------------------------------------------------------------------");
             }
+            // Pass5
+            var mi5 = typeof(Program).GetMethod("TestFunc5");
+            RuntimeHelpers.PrepareMethod(mi5.MethodHandle);
+            var fn5 = mi5.MethodHandle.GetFunctionPointer();
+            {
+                var invoker1 = new PointerFunc<ByRefParam, ByRefParam>(fn5);
+                Console.WriteLine(invoker1.Invoke(ref a).ToRef<int>());
+                //Console.WriteLine(invoker1.Invoke(b));
+                Console.WriteLine("------------------------------------------------------------------------");
+            }
+            var mi6 = typeof(Program).GetMethod("TestFunc6");
+            RuntimeHelpers.PrepareMethod(mi6.MethodHandle);
+            var fn6 = mi6.MethodHandle.GetFunctionPointer();
+            // Pass6
+            {
+                var invoker1 = new PointerFunc<VoidReturn, ByRefParam>(fn6);
+                Console.WriteLine(invoker1.Invoke(a.ToFakeObj()));
+                Console.WriteLine(a);
+                Console.WriteLine("------------------------------------------------------------------------");
+            }
         }
 
         public static IntPtr TestFunc1(ref int p)
@@ -91,6 +111,16 @@ namespace TestPointerDelegate
                 IntPtr address = *(IntPtr*)pptr;
                 return address;
             }
+        }
+        public static ref int TestFunc5(ref int r)
+        {
+            ++r;
+            return ref r;
+        }
+        public static void TestFunc6(ref int r)
+        {
+            Console.WriteLine("in TestFunc6");
+            ++r;
         }
     }
 }

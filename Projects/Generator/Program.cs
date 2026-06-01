@@ -2,6 +2,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
+using System.Data;
 
 namespace Generator
 {
@@ -190,6 +191,8 @@ namespace Generator
             var baseType = module.GetType("Mod.LowLevel.PointerDelegate");
             var pfnField = baseType.GetField("_Pfn");
             var delField = baseType.GetField("_Del");
+            var retField = baseType.GetField("_ReturnCategory");
+            var impField = baseType.GetField("_ImpCategory");
             var getRefParamCategoryRef = module.ImportReference(baseType.GetMethod("GetRefParamCategory"));
 
             foreach (var type in module.Types)
@@ -206,9 +209,9 @@ namespace Generator
                     bool isGenericMethod = method.GenericParameters.Count > 0;
 
                     if (isGenericMethod)
-                        InjectGenericInvoke(method, type, category.Value, pfnField, delField, module, getRefParamCategoryRef);
+                        InjectGenericInvoke(method, type, category.Value, pfnField, delField, retField, impField, module, getRefParamCategoryRef);
                     else
-                        InjectNonGenericInvoke(method, type, category.Value, pfnField, delField, module);
+                        InjectNonGenericInvoke(method, type, category.Value, pfnField, delField, retField, impField, module);
                 }
             }
 
@@ -223,6 +226,8 @@ namespace Generator
                     RemoveNop(method);
                 }
             }
+
+            InjectFakeConvert(module);
 
             asm.Write(tar);
             asm.Dispose();
@@ -265,9 +270,9 @@ namespace Generator
             if (typeName.StartsWith("PointerRefFuncInvoker")) return null;
             if (typeName.StartsWith("PointerFuncInvoker")) return null;
             if (typeName.StartsWith("PointerActionInvoker")) return null;
-            if (typeName.StartsWith("PointerRefFunc")) return DelegateCategory.RefFunc;
+            if (typeName.StartsWith("PointerRefFunc")) return null;
             if (typeName.StartsWith("PointerFunc")) return DelegateCategory.Func;
-            if (typeName.StartsWith("PointerAction")) return DelegateCategory.Action;
+            if (typeName.StartsWith("PointerAction")) return null;
             return null;
         }
 
@@ -297,22 +302,58 @@ namespace Generator
             return result;
         }
 
-        static TypeReference GetDelegateTypeFromCtor(TypeDefinition type)
+        static TypeReference GetFuncTypeFromCtor(TypeDefinition type)
         {
             foreach (var ctor in type.Methods)
             {
                 if (!ctor.IsConstructor || ctor.Parameters.Count == 0) continue;
                 var paramType = ctor.Parameters[0].ParameterType;
                 var name = paramType.FullName;
-                if (name.StartsWith("System.Action") || name.StartsWith("System.Func") || name.StartsWith("Mod.LowLevel.RefFunc"))
+                if (name.StartsWith("System.Func"))
+                    return paramType;
+            }
+            return null;
+        }
+        static TypeReference GetActionTypeFromCtor(TypeDefinition type)
+        {
+            foreach (var ctor in type.Methods)
+            {
+                if (!ctor.IsConstructor || ctor.Parameters.Count == 0) continue;
+                var paramType = ctor.Parameters[0].ParameterType;
+                var name = paramType.FullName;
+                if (name.StartsWith("System.Action"))
                     return paramType;
             }
             return null;
         }
 
-        static MethodReference CreateDelegateInvokeRef(TypeDefinition type, DelegateCategory category, ModuleDefinition module)
+        static MethodReference CreateFuncInvokeRef(TypeDefinition type, DelegateCategory category, ModuleDefinition module)
         {
-            var delTypeRef = GetDelegateTypeFromCtor(type);
+            var delTypeRef = GetFuncTypeFromCtor(type);
+            if (delTypeRef is GenericInstanceType git)
+            {
+                var delTypeDef = git.ElementType.Resolve();
+                var invokeMethod = delTypeDef.GetMethod("Invoke");
+                var invokeRef = new MethodReference("Invoke", invokeMethod.ReturnType, delTypeRef);
+                invokeRef.HasThis = invokeMethod.HasThis;
+                foreach (var p in invokeMethod.Parameters)
+                    invokeRef.Parameters.Add(new ParameterDefinition(p.ParameterType));
+                return invokeRef;
+            }
+            else
+            {
+                var delTypeDef = delTypeRef.Resolve();
+                var invokeMethod = delTypeDef.GetMethod("Invoke");
+                var invokeRef = new MethodReference("Invoke", invokeMethod.ReturnType, delTypeRef);
+                invokeRef.HasThis = invokeMethod.HasThis;
+                foreach (var p in invokeMethod.Parameters)
+                    invokeRef.Parameters.Add(new ParameterDefinition(p.ParameterType));
+                return invokeRef;
+            }
+        }
+        static MethodReference CreateActionInvokeRef(TypeDefinition type, DelegateCategory category, ModuleDefinition module)
+        {
+            var delTypeRef = GetActionTypeFromCtor(type);
             if (delTypeRef is GenericInstanceType git)
             {
                 var delTypeDef = git.ElementType.Resolve();
@@ -336,37 +377,40 @@ namespace Generator
         }
 
         static void InjectNonGenericInvoke(MethodDefinition method, TypeDefinition type,
-            DelegateCategory category, FieldDefinition pfnField, FieldDefinition delField, ModuleDefinition module)
+            DelegateCategory category, FieldDefinition pfnField, FieldDefinition delField,
+            FieldDefinition retField, FieldDefinition impField, ModuleDefinition module)
         {
             method.Body.Instructions.Clear();
             method.Body.Variables.Clear();
             method.Body.ExceptionHandlers.Clear();
 
             var emitter = method.Body.GetILProcessor();
-            var delTypeRef = GetDelegateTypeFromCtor(type);
-            bool hasReturn = category != DelegateCategory.Action;
+            var funcTypeRef = GetFuncTypeFromCtor(type);
+            var actTypeRef = GetActionTypeFromCtor(type);
 
-            VariableDefinition retValLocal = null;
-            if (hasReturn)
-            {
-                retValLocal = new VariableDefinition(GetCallSiteReturnType(type, category));
-                method.Body.Variables.Add(retValLocal);
-            }
+            var returnType = GetCallSiteReturnType(type, category);
+            VariableDefinition retValLocal = new VariableDefinition(returnType);
+            method.Body.Variables.Add(retValLocal);
 
             var loadDelegateLabel = emitter.Create(OpCodes.Nop);
             var afterObjLabel = emitter.Create(OpCodes.Nop);
-            var callvirtLabel = emitter.Create(OpCodes.Nop);
+            var calldelLabel = emitter.Create(OpCodes.Nop);
+            var callvoidfnLabel = emitter.Create(OpCodes.Nop);
+            var callactionLabel = emitter.Create(OpCodes.Nop);
 
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, pfnField);
             emitter.Emit(OpCodes.Brfalse, loadDelegateLabel);
-            emitter.Emit(OpCodes.Ldnull);
+            // load default value for return type
+            emitter.Emit(OpCodes.Ldloca, retValLocal);
+            emitter.Emit(OpCodes.Initobj, returnType);
+            emitter.Emit(OpCodes.Ldloc, retValLocal);
             emitter.Emit(OpCodes.Br, afterObjLabel);
 
             emitter.Append(loadDelegateLabel);
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, delField);
-            emitter.Emit(OpCodes.Castclass, delTypeRef);
+            //emitter.Emit(OpCodes.Castclass, delTypeRef);
 
             emitter.Append(afterObjLabel);
 
@@ -377,10 +421,14 @@ namespace Generator
 
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, pfnField);
-            emitter.Emit(OpCodes.Brfalse, callvirtLabel);
+            emitter.Emit(OpCodes.Brfalse, calldelLabel);
 
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, pfnField);
+
+            emitter.Emit(OpCodes.Ldarg_0);
+            emitter.Emit(OpCodes.Ldfld, retField);
+            emitter.Emit(OpCodes.Brfalse, callvoidfnLabel);
 
             var callSite = new CallSite(GetCallSiteReturnType(type, category));
             callSite.CallingConvention = MethodCallingConvention.Default;
@@ -389,25 +437,40 @@ namespace Generator
                 callSite.Parameters.Add(new ParameterDefinition(p));
             }
             emitter.Emit(OpCodes.Calli, callSite);
-            if (hasReturn)
-            {
-                emitter.Emit(OpCodes.Stloc, retValLocal);
-                emitter.Emit(OpCodes.Pop);
-                emitter.Emit(OpCodes.Ldloc, retValLocal);
-            }
-            else
-            {
-                emitter.Emit(OpCodes.Pop);
-            }
+            emitter.Emit(OpCodes.Stloc, retValLocal);
+            emitter.Emit(OpCodes.Pop);
+            emitter.Emit(OpCodes.Ldloc, retValLocal);
             emitter.Emit(OpCodes.Ret);
 
-            emitter.Append(callvirtLabel);
-            emitter.Emit(OpCodes.Callvirt, CreateDelegateInvokeRef(type, category, module));
+            emitter.Append(callvoidfnLabel);
+            var callSiteVoid = new CallSite(module.TypeSystem.Void);
+            callSiteVoid.CallingConvention = MethodCallingConvention.Default;
+            foreach (var p in GetCallSiteParams(type, category))
+            {
+                callSiteVoid.Parameters.Add(new ParameterDefinition(p));
+            }
+            emitter.Emit(OpCodes.Calli, callSiteVoid);
+            emitter.Emit(OpCodes.Ret);
+
+            emitter.Append(calldelLabel);
+            emitter.Emit(OpCodes.Ldarg_0);
+            emitter.Emit(OpCodes.Ldfld, impField);
+            emitter.Emit(OpCodes.Ldc_I4_1);
+            emitter.Emit(OpCodes.Beq, callactionLabel);
+            emitter.Emit(OpCodes.Call, CreateFuncInvokeRef(type, category, module));
+            emitter.Emit(OpCodes.Ret);
+
+            emitter.Append(callactionLabel);
+            emitter.Emit(OpCodes.Call, CreateActionInvokeRef(type, category, module));
+            emitter.Emit(OpCodes.Ldloca, retValLocal);
+            emitter.Emit(OpCodes.Initobj, returnType);
+            emitter.Emit(OpCodes.Ldloc, retValLocal);
             emitter.Emit(OpCodes.Ret);
         }
 
         static void InjectGenericInvoke(MethodDefinition method, TypeDefinition type,
             DelegateCategory category, FieldDefinition pfnField, FieldDefinition delField,
+            FieldDefinition retField, FieldDefinition impField,
             ModuleDefinition module, MethodReference getRefParamCategoryRef)
         {
             method.Body.Instructions.Clear();
@@ -415,8 +478,7 @@ namespace Generator
             method.Body.ExceptionHandlers.Clear();
 
             var emitter = method.Body.GetILProcessor();
-            var delTypeRef = GetDelegateTypeFromCtor(type);
-            bool hasReturn = category != DelegateCategory.Action;
+            //var delTypeRef = GetFuncTypeFromCtor(type);
 
             int startIndex = category == DelegateCategory.Action ? 0 : 1;
             int paramCount = method.Parameters.Count;
@@ -428,12 +490,9 @@ namespace Generator
                 method.Body.Variables.Add(refcatenLocals[i]);
             }
 
-            VariableDefinition retValLocal = null;
-            if (hasReturn)
-            {
-                retValLocal = new VariableDefinition(GetCallSiteReturnType(type, category));
-                method.Body.Variables.Add(retValLocal);
-            }
+            var returnType = GetCallSiteReturnType(type, category);
+            VariableDefinition retValLocal = new VariableDefinition(returnType);
+            method.Body.Variables.Add(retValLocal);
 
             for (int i = 0; i < paramCount; i++)
             {
@@ -452,18 +511,23 @@ namespace Generator
 
             var loadDelegateLabel = emitter.Create(OpCodes.Nop);
             var afterObjLabel = emitter.Create(OpCodes.Nop);
-            var callvirtLabel = emitter.Create(OpCodes.Nop);
+            var calldelLabel = emitter.Create(OpCodes.Nop);
+            var callvoidfnLabel = emitter.Create(OpCodes.Nop);
+            var callactionLabel = emitter.Create(OpCodes.Nop);
 
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, pfnField);
             emitter.Emit(OpCodes.Brfalse, loadDelegateLabel);
-            emitter.Emit(OpCodes.Ldnull);
+            // load default value for return type
+            emitter.Emit(OpCodes.Ldloca, retValLocal);
+            emitter.Emit(OpCodes.Initobj, returnType);
+            emitter.Emit(OpCodes.Ldloc, retValLocal);
             emitter.Emit(OpCodes.Br, afterObjLabel);
 
             emitter.Append(loadDelegateLabel);
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, delField);
-            emitter.Emit(OpCodes.Castclass, delTypeRef);
+            //emitter.Emit(OpCodes.Castclass, delTypeRef);
 
             emitter.Append(afterObjLabel);
 
@@ -498,10 +562,14 @@ namespace Generator
 
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, pfnField);
-            emitter.Emit(OpCodes.Brfalse, callvirtLabel);
+            emitter.Emit(OpCodes.Brfalse, calldelLabel);
 
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, pfnField);
+
+            emitter.Emit(OpCodes.Ldarg_0);
+            emitter.Emit(OpCodes.Ldfld, retField);
+            emitter.Emit(OpCodes.Brfalse, callvoidfnLabel);
 
             var callSite = new CallSite(GetCallSiteReturnType(type, category));
             callSite.CallingConvention = MethodCallingConvention.Default;
@@ -510,21 +578,69 @@ namespace Generator
                 callSite.Parameters.Add(new ParameterDefinition(p));
             }
             emitter.Emit(OpCodes.Calli, callSite);
-            if (hasReturn)
-            {
-                emitter.Emit(OpCodes.Stloc, retValLocal);
-                emitter.Emit(OpCodes.Pop);
-                emitter.Emit(OpCodes.Ldloc, retValLocal);
-            }
-            else
-            {
-                emitter.Emit(OpCodes.Pop);
-            }
+            emitter.Emit(OpCodes.Stloc, retValLocal);
+            emitter.Emit(OpCodes.Pop);
+            emitter.Emit(OpCodes.Ldloc, retValLocal);
             emitter.Emit(OpCodes.Ret);
 
-            emitter.Append(callvirtLabel);
-            emitter.Emit(OpCodes.Callvirt, CreateDelegateInvokeRef(type, category, module));
+            emitter.Append(callvoidfnLabel);
+            var callSiteVoid = new CallSite(module.TypeSystem.Void);
+            callSiteVoid.CallingConvention = MethodCallingConvention.Default;
+            foreach (var p in GetCallSiteParams(type, category))
+            {
+                callSiteVoid.Parameters.Add(new ParameterDefinition(p));
+            }
+            emitter.Emit(OpCodes.Calli, callSiteVoid);
             emitter.Emit(OpCodes.Ret);
+
+            emitter.Append(calldelLabel);
+            emitter.Emit(OpCodes.Ldarg_0);
+            emitter.Emit(OpCodes.Ldfld, impField);
+            emitter.Emit(OpCodes.Ldc_I4_1);
+            emitter.Emit(OpCodes.Beq, callactionLabel);
+            emitter.Emit(OpCodes.Call, CreateFuncInvokeRef(type, category, module));
+            emitter.Emit(OpCodes.Ret);
+
+            emitter.Append(callactionLabel);
+            emitter.Emit(OpCodes.Call, CreateActionInvokeRef(type, category, module));
+            emitter.Emit(OpCodes.Ldloca, retValLocal);
+            emitter.Emit(OpCodes.Initobj, returnType);
+            emitter.Emit(OpCodes.Ldloc, retValLocal);
+            emitter.Emit(OpCodes.Ret);
+        }
+
+        static void InjectFakeConvert(ModuleDefinition module)
+        {
+            var type = module.GetType("Mod.LowLevel.PointerDelegateExtensions");
+            var mtoref = type.GetMethod("ToRef");
+            mtoref.Body.Variables.Clear();
+            mtoref.Body.Instructions.Clear();
+            {
+                var vrv = new VariableDefinition(mtoref.ReturnType);
+                mtoref.Body.Variables.Add(vrv);
+                var emitter = mtoref.Body.GetILProcessor();
+                emitter.Emit(OpCodes.Ldloca, 0);
+                emitter.Emit(OpCodes.Ldarga, 0);
+                emitter.Emit(OpCodes.Ldind_Ref);
+                emitter.Emit(OpCodes.Stind_Ref);
+                emitter.Emit(OpCodes.Ldloc_0);
+                emitter.Emit(OpCodes.Ret);
+            }
+            var mtofake = type.GetMethod("ToFakeRefObj");
+            var faketype = module.GetType("Mod.LowLevel.ByRefParam");
+            mtofake.Body.Instructions.Clear();
+            mtofake.Body.Variables.Clear();
+            {
+                var vrv = new VariableDefinition(faketype);
+                mtofake.Body.Variables.Add(vrv);
+                var emitter = mtofake.Body.GetILProcessor();
+                emitter.Emit(OpCodes.Ldloca, 0);
+                emitter.Emit(OpCodes.Ldarga, 0);
+                emitter.Emit(OpCodes.Ldind_Ref);
+                emitter.Emit(OpCodes.Stind_Ref);
+                emitter.Emit(OpCodes.Ldloc_0);
+                emitter.Emit(OpCodes.Ret);
+            }
         }
     }
 }
