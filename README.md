@@ -28,15 +28,11 @@ In this condition, we normally use ```Action<T1, T2, ...> ``` generic delegate t
 
 3) Make an instance of PointerDelegate
 
-There are there kind of PointerDelegate: PointerAction - no return, PointerFunc - return a value, PointerRefFunc - return a ref.
+There are 16 "PointerFunc"s. Unlike System.Func, the first generic parameter of PointerFunc is the return value.
 
-All of them are generic. The generic parameters you provide must be compatiable with the target function's signature.
+All of them are generic. The generic parameters you provide must be compatiable with the target function's signature. Use ByRefParam to indicate the parameter or return value to be a "ref XXX". Use VoidReturn to indicate the func will not return value to caller. 
 
-For example, for "static IntPtr TestFunc1(ref int p)" we should choose PointerFunc. unlike System.Func, the first generic parameter of PointerFunc is the return value. And for the second, there is a ref int, the underlying type for a ref is IntPtr, so we also choose IntPtr as the second generic parameter. So the final type we choose is: ```PointerFunc<IntPtr, IntPtr>```
-
-```C#
-            var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
-```
+For example, for "static ref int TestFunc1(ref int p)" we should choose ```PointerFunc<ByRefParam, ByRefParam>```. For "static void TestFunc1(IntPtr p)" we should choose ```PointerFunc<VoidReturn, IntPtr>```
 
 Instead of function pointer (e.g. on Unity IL2CPP, it is impossible to get a func pointer), you can also simply wrap a system delegate using constructor ```PointerFunc<IntPtr, IntPtr>(Func<IntPtr, IntPtr> del)```
 
@@ -49,24 +45,7 @@ When there is no ref parameters, you can use the non-generic Invoke, with strict
 When there are ref parameters, or you want to pass a argument of the type different from the generic parameter when creating the PointerDelegate, you'll find the generic ```Invoke<...>(...)``` useful - you can provide a new type parameter for each argument!
 But be careful, the parameters must be compatiable, e.g. int - enum, object - realclass, ref - IntPtr.
 
-5) Clone() and WithRefParam(...)
-
-Sometimes, we want to explicitly specify a parameter to take a ref or not, especially when the parameter is IntPtr.
-In this condition, we can use WithRefParam(...)
-
-We can clone the PointerDelegate, and WithRefParam() on new instance. (The Clone() is just a MemberwiseClone())
-
-```C#
-            var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
-            var invoker1_2 = invoker1.Clone().WithRefParam(0);
-            var invoker1_3 = invoker1.Clone().WithRefParam(0, false);
-```
-
-6) Use ByRefParam to force a parameter to be a ref
-
-If you provide ByRefParam as the generic parameter, e.g ```new PointerFunc<IntPtr, ByRefParam>```, the corresponding parameter will always be treated as taking a ref XXX.
-
-7) What is the underlayer of it? How does it convert parameters.
+5) What is the underlayer of it? How does it convert parameters.
 
 In IL, the Invoke(...) just:
 
@@ -94,53 +73,6 @@ and then return.
 ```
 
 It is slightly complicated for ```Invoke<>```. All its parameters are passed by ref ("in" ref). When a argument is "!IsRefParam(...)" (meaning we need its value), we do a ldobj after ldarg, while when a argument is "IsRefParam(...)" (meaning we need its ref), we just leave ldarg alone (because the arg is a ref already).
-
-The IsRefParam(...) first checks whether you have explicitly specified the parameter to be a ref or a value. When not specified explicitly, it treate a parameter as a ref when its underlying type is IntPtr and calling type is not IntPtr, otherwise, we should use the parameter's value.
-
-So the output of the code below:
-```C#
-        static void Main(string[] args)
-        {
-            IntPtr a = (IntPtr)10;
-            long b = 300;
-
-            var mi1 = typeof(Program).GetMethod("TestFunc1");
-            RuntimeHelpers.PrepareMethod(mi1.MethodHandle);
-            var fn1 = mi1.MethodHandle.GetFunctionPointer();
-            var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
-            var invoker1_2 = invoker1.Clone().WithRefParam(0);
-            var invoker1_3 = invoker1.Clone().WithRefParam(0, false);
-            Console.WriteLine(invoker1.Invoke(ref a));
-            Console.WriteLine(invoker1.Invoke(b));
-            Console.WriteLine(invoker1_2.Invoke(ref a));
-            Console.WriteLine(invoker1_2.Invoke(b));
-            Console.WriteLine(invoker1_3.Invoke(ref a));
-            Console.WriteLine(invoker1_3.Invoke(b));
-        }
-
-        public static IntPtr TestFunc1(ref int p)
-        {
-            unsafe
-            {
-                return (IntPtr)Unsafe.AsPointer<int>(ref p);
-            }
-        }
-```
-is:
-```
-10
-49225918528
-49225918536
-49225918528
-10
-300
-```
-
-8) Provide calling parameter's types using PointerDelegateInvoker
-
-If you need to specify each parameter's type before calling the PointerDelegate, you can use PointerDelegateInvoker to wrap it.
-
-For example, ```PointerFuncInvoker<int, ByRefParam, uint>```, the first generic parameter (int) means the return is an int value. The second generic parameter (ByRefParam) means the underlying is ByRefParam. And the last generic parameter (uint) means you want to call this with a "ref uint".
 
 # 中文说明
 
@@ -173,15 +105,11 @@ For example, ```PointerFuncInvoker<int, ByRefParam, uint>```, the first generic 
 
 3) 创建 PointerDelegate 实例
 
-PointerDelegate 有三种类型：PointerAction - 无返回值，PointerFunc - 返回一个值，PointerRefFunc - 返回一个引用。
+PointerDelegate 子类有16个 PointerFunc。与 System.Func 不同，PointerFunc 的第一个泛型参数是返回值类型。
 
-它们都是泛型的。你提供的泛型参数必须与目标函数的签名兼容。
+它们都是泛型的。你提供的泛型参数必须与目标函数的签名兼容。使用 ByRefParam 来指定一个参数或者返回值是一个引用（ref XXX）。使用 VoidReturn 来指定函数没有返回值。 
 
-例如，对于 "static IntPtr TestFunc1(ref int p)"，我们应该选择 PointerFunc。与 System.Func 不同，PointerFunc 的第一个泛型参数是返回值类型。对于第二个参数，有一个 ref int，ref 的底层类型是 IntPtr，所以我们也选择 IntPtr 作为第二个泛型参数。因此最终选择的类型是：```PointerFunc<IntPtr, IntPtr>```
-
-```C#
-            var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
-```
+例如，对于"static ref int TestFunc1(ref int p)"，我们应当选择 ```PointerFunc<ByRefParam, ByRefParam>```。 对于"static void TestFunc1(IntPtr p)"，我们应当选择 ```PointerFunc<VoidReturn, IntPtr>```
 
 如果不方便拿到指针（比如Unity IL2CPP平台），你可以简单包装一个系统的委托对象，例如使用如下的构造函数：```PointerFunc<IntPtr, IntPtr>(Func<IntPtr, IntPtr> del)```
 
@@ -194,24 +122,7 @@ PointerDelegate 有三种类型：PointerAction - 无返回值，PointerFunc - �
 当有 ref 参数时，或者你想在调用时传入与创建 PointerDelegate 时不同的类型参数，你会发现泛型的 ```Invoke<...>(...)``` 很有用——你可以为每个参数提供一个新的类型参数！
 但要注意，参数必须兼容，例如 int - enum，object - realclass，ref - IntPtr。
 
-5) Clone() 和 WithRefParam(...)
-
-有时候，我们想显式地指定某个参数是引用还是值，尤其是当参数是 IntPtr 的时候。
-在这种情况下，我们可以使用 WithRefParam(...)
-
-我们可以克隆 PointerDelegate，然后在新实例上调用 WithRefParam()。（Clone() 只是 MemberwiseClone()）
-
-```C#
-            var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
-            var invoker1_2 = invoker1.Clone().WithRefParam(0);
-            var invoker1_3 = invoker1.Clone().WithRefParam(0, false);
-```
-
-6) 指定ByRefParam作为泛型参数以强制该参数使用ref
-
-如果你指定ByRefParam作为泛型参数，例如```new PointerFunc<IntPtr, ByRefParam>```，相应的参数将直接被认为需要使用"ref XXX"作为参数。
-
-7) 它的底层原理是什么？它是如何转换参数的。
+5) 它的底层原理是什么？它是如何转换参数的。
 
 在 IL 层面，Invoke(...) 只是：
 
@@ -239,49 +150,3 @@ PointerDelegate 有三种类型：PointerAction - 无返回值，PointerFunc - �
 ```
 
 对于 ```Invoke<>``` 则稍微复杂一些。它的所有参数都以引用方式传递（"in" 引用）。当某个参数 "!IsRefParam(...)"（即我们需要它的值）时，我们在 ldarg 之后执行 ldobj；而当某个参数 "IsRefParam(...)"（即我们需要它的引用）时，我们只保留 ldarg 不变（因为参数本身已经是引用了）。
-
-IsRefParam(...) 首先检查你是否已显式指定了该参数是引用还是值。当未显式指定时，如果参数的底层类型是 IntPtr 且调用类型不是 IntPtr，则将其视为引用参数，否则使用参数的值。
-
-因此以下代码的输出：
-```C#
-        static void Main(string[] args)
-        {
-            IntPtr a = (IntPtr)10;
-            long b = 300;
-
-            var mi1 = typeof(Program).GetMethod("TestFunc1");
-            RuntimeHelpers.PrepareMethod(mi1.MethodHandle);
-            var fn1 = mi1.MethodHandle.GetFunctionPointer();
-            var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
-            var invoker1_2 = invoker1.Clone().WithRefParam(0);
-            var invoker1_3 = invoker1.Clone().WithRefParam(0, false);
-            Console.WriteLine(invoker1.Invoke(ref a));
-            Console.WriteLine(invoker1.Invoke(b));
-            Console.WriteLine(invoker1_2.Invoke(ref a));
-            Console.WriteLine(invoker1_2.Invoke(b));
-            Console.WriteLine(invoker1_3.Invoke(ref a));
-            Console.WriteLine(invoker1_3.Invoke(b));
-        }
-
-        public static IntPtr TestFunc1(ref int p)
-        {
-            unsafe
-            {
-                return (IntPtr)Unsafe.AsPointer<int>(ref p);
-            }
-        }
-```
-是：
-```
-10
-49225918528
-49225918536
-49225918528
-10
-300
-```
-
-8) 可以在创建时就指定好调用参数的类型
-
-如果你需要在调用之前就为每个参数确定下来调用参数的类型，你可以使用PointerDelegateInvoker包装一下。
-例如```PointerFuncInvoker<int, ByRefParam, uint>```，第一个泛型参数（int）意味着它会返回一个int值。第二个泛型参数（ByRefParam）意味着底层方法需要接收一个引用。最后，第三个泛型参数（uint）意味着你会使用"ref uint"来调用这个委托而不是别的其他的"ref XXX"。

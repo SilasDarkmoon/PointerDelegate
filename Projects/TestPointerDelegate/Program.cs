@@ -17,55 +17,31 @@ namespace TestPointerDelegate
             // Pass1
             {
                 var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
-                var invoker1_2 = invoker1.Clone().WithRefParam(0);
-                var invoker1_3 = invoker1.Clone().WithRefParam(0, false);
                 Console.WriteLine(invoker1.Invoke(ref a));
                 Console.WriteLine(invoker1.Invoke(b));
-                Console.WriteLine(invoker1_2.Invoke(ref a));
-                Console.WriteLine(invoker1_2.Invoke(b));
-                Console.WriteLine(invoker1_3.Invoke(ref a));
-                Console.WriteLine(invoker1_3.Invoke(b));
                 Console.WriteLine("------------------------------------------------------------------------");
             }
             // Pass2:
             {
                 var invoker1 = new PointerFunc<IntPtr, ByRefParam>(fn1);
-                var invoker1_2 = invoker1.Clone().WithRefParam(0);
-                var invoker1_3 = invoker1.Clone().WithRefParam(0, false);
                 Console.WriteLine(invoker1.Invoke(ref a));
                 Console.WriteLine(invoker1.Invoke(b));
-                Console.WriteLine(invoker1_2.Invoke(ref a));
-                Console.WriteLine(invoker1_2.Invoke(b));
-                Console.WriteLine(invoker1_3.Invoke(ref a));
-                Console.WriteLine(invoker1_3.Invoke(b));
                 Console.WriteLine("------------------------------------------------------------------------");
             }
             Func<IntPtr, IntPtr> del2 = TestFunc2;
             // Pass3
             {
                 var invoker1 = new PointerFunc<IntPtr, IntPtr>(del2);
-                var invoker1_2 = invoker1.Clone().WithRefParam(0);
-                var invoker1_3 = invoker1.Clone().WithRefParam(0, false);
                 Console.WriteLine(invoker1.Invoke(ref a));
                 Console.WriteLine(invoker1.Invoke(b));
-                Console.WriteLine(invoker1_2.Invoke(ref a));
-                Console.WriteLine(invoker1_2.Invoke(b));
-                Console.WriteLine(invoker1_3.Invoke(ref a));
-                Console.WriteLine(invoker1_3.Invoke(b));
                 Console.WriteLine("------------------------------------------------------------------------");
             }
             Func<ByRefParam, IntPtr> del3 = TestFunc3;
             // Pass4
             {
                 var invoker1 = new PointerFunc<IntPtr, ByRefParam>(del3);
-                var invoker1_2 = invoker1.Clone().WithRefParam(0);
-                var invoker1_3 = invoker1.Clone().WithRefParam(0, false);
                 Console.WriteLine(invoker1.Invoke(ref a));
                 Console.WriteLine(invoker1.Invoke(b));
-                Console.WriteLine(invoker1_2.Invoke(ref a));
-                Console.WriteLine(invoker1_2.Invoke(b));
-                Console.WriteLine(invoker1_3.Invoke(ref a));
-                Console.WriteLine(invoker1_3.Invoke(b));
                 Console.WriteLine("------------------------------------------------------------------------");
             }
             // Pass5

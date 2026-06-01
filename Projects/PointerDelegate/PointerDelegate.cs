@@ -7,38 +7,6 @@ namespace Mod.LowLevel
 {
     public static class PointerDelegateExtensions
     {
-        public static T WithRefParam<T>(this T thiz, int paramIndex, bool? isRefParam) where T : PointerDelegate
-        {
-            thiz.SetRefParamFlag(paramIndex, isRefParam);
-            return thiz;
-        }
-        public static T WithRefParam<T>(this T thiz, int paramIndex) where T : PointerDelegate
-        {
-            thiz.SetRefParamFlag(paramIndex, true);
-            return thiz;
-        }
-        public static T WithRefParam<T>(this T thiz, params int[] paramIndices) where T : PointerDelegate
-        {
-            if (paramIndices != null)
-            {
-                for (int i = 0; i < paramIndices.Length; ++i)
-                {
-                    thiz.SetRefParamFlag(paramIndices[i], true);
-                }
-            }
-            return thiz;
-        }
-        public static T WithRefParam<T>(this T thiz, params bool?[] flags) where T : PointerDelegate
-        {
-            if (flags != null)
-            {
-                for (int i = 0; i < flags.Length; ++i)
-                {
-                    thiz.SetRefParamFlag(i, flags[i]);
-                }
-            }
-            return thiz;
-        }
         public static ref T ToRef<T>(this ByRefParam fakeobj)
         {
             throw new NotImplementedException();
@@ -70,6 +38,7 @@ namespace Mod.LowLevel
 
     public abstract class PointerDelegate : ICloneable, IFreeInvokable
     {
+        protected PointerDelegate() { }
         protected IntPtr _Pfn;
         protected PointerDelegate(IntPtr fn)
         {
@@ -82,85 +51,23 @@ namespace Mod.LowLevel
         }
 
         protected uint _RefParamFlags;
-        public bool? GetRefParamFlag(int paramIndex)
+        protected bool GetRefParamFlag(int paramIndex)
         {
             //if (paramIndices >= 16 || paramIndices < 0) throw new ArgumentOutOfRangeException(nameof(paramIndices), $"{nameof(paramIndices)} must be [0, 15]");
-            bool isNull = (_RefParamFlags & (1u << (paramIndex * 2 + 1))) == 0;
-            if (isNull) return null;
-            bool flag = (_RefParamFlags & (1u << (paramIndex * 2))) != 0;
+            bool flag = (_RefParamFlags & (1u << paramIndex)) != 0;
             return flag;
         }
-        public void SetRefParamFlag(int paramIndex, bool? isRefParam)
+        protected void SetRefParamFlag(int paramIndex, bool isRefParam)
         {
             //if (paramIndices >= 16 || paramIndices < 0) throw new ArgumentOutOfRangeException(nameof(paramIndices), $"{nameof(paramIndices)} must be [0, 15]");
-            if (isRefParam == null)
+            if (isRefParam)
             {
-                _RefParamFlags &= ~(3u << (paramIndex * 2));
+                _RefParamFlags |= (1u << paramIndex);
             }
             else
             {
-                _RefParamFlags |= (1u << (paramIndex * 2 + 1));
-                if (isRefParam.Value)
-                {
-                    _RefParamFlags |= (1u << (paramIndex * 2));
-                }
-                else
-                {
-                    _RefParamFlags &= ~(1u << (paramIndex * 2));
-                }
+                _RefParamFlags &= ~(1u << paramIndex);
             }
-        }
-        protected bool IsRefParam(int paramIndex, Type ut, Type pt)
-        {
-            bool? refFlag = GetRefParamFlag(paramIndex);
-            if (refFlag.HasValue) return refFlag.Value;
-            if (ut == typeof(ByRefParam))
-            {
-                SetRefParamFlag(paramIndex, true);
-                return true;
-            }
-            return ut == typeof(IntPtr) && pt != typeof(IntPtr);
-        }
-        //protected enum RefParamCategory
-        //{
-        //    Val = 0,
-        //    Ref = 1,
-        //    Obj = 2,
-        //}
-        protected int GetRefParamCategory<U, P>(int paramIndex)
-        {
-            bool? refFlag = GetRefParamFlag(paramIndex);
-            var ut = typeof(U);
-            var nt = typeof(IntPtr);
-            if (refFlag.HasValue)
-            {
-                if (refFlag.Value)
-                {
-                    if (ut == nt)
-                    {
-                        return 1;
-                    }
-                    else
-                    {
-                        return 2;
-                    }
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-            var ot = typeof(ByRefParam);
-            if (ut == ot)
-            {
-                SetRefParamFlag(paramIndex, true);
-                return 2;
-            }
-            if (ut == nt && typeof(P) != nt)
-            {
-                return 1;
-            }
-            return 0;
         }
         //protected enum ReturnCategory
         //{
@@ -184,13 +91,6 @@ namespace Mod.LowLevel
                 return 1;
             }
         }
-        //protected enum ImpCategory
-        //{
-        //    FuncPointer = 0,
-        //    Action = 1,
-        //    Func = 2,
-        //}
-        protected int _ImpCategory;
         object ICloneable.Clone()
         {
             return MemberwiseClone();
@@ -199,20 +99,25 @@ namespace Mod.LowLevel
 
     public class PointerFunc<R> : PointerDelegate, IFreeInvokableFunc<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
         }
-        public PointerFunc(Action del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<R> del) : base(del)
+        public PointerFunc(Action del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<R>(() =>
+            {
+                del();
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke()
         {
@@ -225,20 +130,26 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1> : PointerDelegate, IFreeInvokableFunc1<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, R> del) : base(del)
+        public PointerFunc(Action<U1> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, R>((p1) =>
+            {
+                del(p1);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1)
         {
@@ -248,11 +159,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1> WithRefParam(bool? flag1)
-        {
-            SetRefParamFlag(0, flag1);
-            return this;
-        }
         public PointerFunc<R, U1> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1>;
@@ -260,20 +166,27 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2> : PointerDelegate, IFreeInvokableFunc2<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, R> del) : base(del)
+        public PointerFunc(Action<U1, U2> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, R>((p1, p2) =>
+            {
+                del(p1, p2);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2)
         {
@@ -283,12 +196,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2> WithRefParam(bool? flag1, bool? flag2)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            return this;
-        }
         public PointerFunc<R, U1, U2> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2>;
@@ -296,20 +203,28 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3> : PointerDelegate, IFreeInvokableFunc3<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, R>((p1, p2, p3) =>
+            {
+                del(p1, p2, p3);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3)
         {
@@ -319,13 +234,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3> WithRefParam(bool? flag1, bool? flag2, bool? flag3)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3>;
@@ -333,20 +241,29 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4> : PointerDelegate, IFreeInvokableFunc4<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, R>((p1, p2, p3, p4) =>
+            {
+                del(p1, p2, p3, p4);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
         {
@@ -356,14 +273,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4>;
@@ -371,20 +280,30 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5> : PointerDelegate, IFreeInvokableFunc5<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, R>((p1, p2, p3, p4, p5) =>
+            {
+                del(p1, p2, p3, p4, p5);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
         {
@@ -394,15 +313,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5>;
@@ -410,20 +320,31 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6> : PointerDelegate, IFreeInvokableFunc6<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, R>((p1, p2, p3, p4, p5, p6) =>
+            {
+                del(p1, p2, p3, p4, p5, p6);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
         {
@@ -433,16 +354,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6>;
@@ -450,20 +361,32 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> : PointerDelegate, IFreeInvokableFunc7<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, U7, R>((p1, p2, p3, p4, p5, p6, p7) =>
+            {
+                del(p1, p2, p3, p4, p5, p6, p7);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
         {
@@ -473,17 +396,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6, bool? flag7)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            SetRefParamFlag(6, flag7);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7>;
@@ -491,20 +403,33 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : PointerDelegate, IFreeInvokableFunc8<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, U7, U8, R>((p1, p2, p3, p4, p5, p6, p7, p8) =>
+            {
+                del(p1, p2, p3, p4, p5, p6, p7, p8);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
         {
@@ -514,18 +439,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6, bool? flag7, bool? flag8)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            SetRefParamFlag(6, flag7);
-            SetRefParamFlag(7, flag8);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>;
@@ -533,20 +446,34 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : PointerDelegate, IFreeInvokableFunc9<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R>((p1, p2, p3, p4, p5, p6, p7, p8, p9) =>
+            {
+                del(p1, p2, p3, p4, p5, p6, p7, p8, p9);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
         {
@@ -556,19 +483,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6, bool? flag7, bool? flag8, bool? flag9)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            SetRefParamFlag(6, flag7);
-            SetRefParamFlag(7, flag8);
-            SetRefParamFlag(8, flag9);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>;
@@ -576,20 +490,35 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : PointerDelegate, IFreeInvokableFunc10<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R>((p1, p2, p3, p4, p5, p6, p7, p8, p9, p10) =>
+            {
+                del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
         {
@@ -599,20 +528,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6, bool? flag7, bool? flag8, bool? flag9, bool? flag10)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            SetRefParamFlag(6, flag7);
-            SetRefParamFlag(7, flag8);
-            SetRefParamFlag(8, flag9);
-            SetRefParamFlag(9, flag10);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>;
@@ -620,20 +535,36 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : PointerDelegate, IFreeInvokableFunc11<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R>((p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11) =>
+            {
+                del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
         {
@@ -643,21 +574,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6, bool? flag7, bool? flag8, bool? flag9, bool? flag10, bool? flag11)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            SetRefParamFlag(6, flag7);
-            SetRefParamFlag(7, flag8);
-            SetRefParamFlag(8, flag9);
-            SetRefParamFlag(9, flag10);
-            SetRefParamFlag(10, flag11);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>;
@@ -665,20 +581,37 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : PointerDelegate, IFreeInvokableFunc12<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
+            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R>((p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12) =>
+            {
+                del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
         {
@@ -688,22 +621,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6, bool? flag7, bool? flag8, bool? flag9, bool? flag10, bool? flag11, bool? flag12)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            SetRefParamFlag(6, flag7);
-            SetRefParamFlag(7, flag8);
-            SetRefParamFlag(8, flag9);
-            SetRefParamFlag(9, flag10);
-            SetRefParamFlag(10, flag11);
-            SetRefParamFlag(11, flag12);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>;
@@ -711,20 +628,38 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : PointerDelegate, IFreeInvokableFunc13<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
+            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam));
+            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R>((p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13) =>
+            {
+                del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
         {
@@ -734,23 +669,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6, bool? flag7, bool? flag8, bool? flag9, bool? flag10, bool? flag11, bool? flag12, bool? flag13)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            SetRefParamFlag(6, flag7);
-            SetRefParamFlag(7, flag8);
-            SetRefParamFlag(8, flag9);
-            SetRefParamFlag(9, flag10);
-            SetRefParamFlag(10, flag11);
-            SetRefParamFlag(11, flag12);
-            SetRefParamFlag(12, flag13);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>;
@@ -758,20 +676,39 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : PointerDelegate, IFreeInvokableFunc14<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
+            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam));
+            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam));
+            SetRefParamFlag(13, typeof(U14) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R>((p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14) =>
+            {
+                del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
         {
@@ -781,24 +718,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6, bool? flag7, bool? flag8, bool? flag9, bool? flag10, bool? flag11, bool? flag12, bool? flag13, bool? flag14)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            SetRefParamFlag(6, flag7);
-            SetRefParamFlag(7, flag8);
-            SetRefParamFlag(8, flag9);
-            SetRefParamFlag(9, flag10);
-            SetRefParamFlag(10, flag11);
-            SetRefParamFlag(11, flag12);
-            SetRefParamFlag(12, flag13);
-            SetRefParamFlag(13, flag14);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>;
@@ -806,20 +725,40 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : PointerDelegate, IFreeInvokableFunc15<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
+            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam));
+            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam));
+            SetRefParamFlag(13, typeof(U14) == typeof(ByRefParam));
+            SetRefParamFlag(14, typeof(U15) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R>((p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15) =>
+            {
+                del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
         {
@@ -829,25 +768,6 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6, bool? flag7, bool? flag8, bool? flag9, bool? flag10, bool? flag11, bool? flag12, bool? flag13, bool? flag14, bool? flag15)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            SetRefParamFlag(6, flag7);
-            SetRefParamFlag(7, flag8);
-            SetRefParamFlag(8, flag9);
-            SetRefParamFlag(9, flag10);
-            SetRefParamFlag(10, flag11);
-            SetRefParamFlag(11, flag12);
-            SetRefParamFlag(12, flag13);
-            SetRefParamFlag(13, flag14);
-            SetRefParamFlag(14, flag15);
-            return this;
-        }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>;
@@ -855,20 +775,41 @@ namespace Mod.LowLevel
     }
     public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : PointerDelegate, IFreeInvokableFunc16<R>
     {
-        public PointerFunc(IntPtr fn) : base(fn)
+        protected PointerFunc()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 0;
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
+            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam));
+            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam));
+            SetRefParamFlag(13, typeof(U14) == typeof(ByRefParam));
+            SetRefParamFlag(14, typeof(U15) == typeof(ByRefParam));
+            SetRefParamFlag(15, typeof(U16) == typeof(ByRefParam));
         }
-        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> del) : base(del)
+        public PointerFunc(IntPtr fn) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 1;
+            _Pfn = fn;
         }
-        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> del) : base(del)
+        public PointerFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> del) : this()
         {
-            _ReturnCategory = JudgeReturnCategory(typeof(R));
-            _ImpCategory = 2;
+            _Del = new Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R>((p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16) =>
+            {
+                del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16);
+                return default(R);
+            });
+        }
+        public PointerFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> del) : this()
+        {
+            _Del = del;
         }
         public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
         {
@@ -877,26 +818,6 @@ namespace Mod.LowLevel
         public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16)
         {
             throw new NotImplementedException();
-        }
-        public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> WithRefParam(bool? flag1, bool? flag2, bool? flag3, bool? flag4, bool? flag5, bool? flag6, bool? flag7, bool? flag8, bool? flag9, bool? flag10, bool? flag11, bool? flag12, bool? flag13, bool? flag14, bool? flag15, bool? flag16)
-        {
-            SetRefParamFlag(0, flag1);
-            SetRefParamFlag(1, flag2);
-            SetRefParamFlag(2, flag3);
-            SetRefParamFlag(3, flag4);
-            SetRefParamFlag(4, flag5);
-            SetRefParamFlag(5, flag6);
-            SetRefParamFlag(6, flag7);
-            SetRefParamFlag(7, flag8);
-            SetRefParamFlag(8, flag9);
-            SetRefParamFlag(9, flag10);
-            SetRefParamFlag(10, flag11);
-            SetRefParamFlag(11, flag12);
-            SetRefParamFlag(12, flag13);
-            SetRefParamFlag(13, flag14);
-            SetRefParamFlag(14, flag15);
-            SetRefParamFlag(15, flag16);
-            return this;
         }
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> Clone()
         {
