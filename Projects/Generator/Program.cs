@@ -184,7 +184,6 @@ namespace Generator
             var root = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, "../../../../../"));
             var srcDll = System.IO.Path.Combine(baseDir, "PointerDelegate.dll");
             var tar = System.IO.Path.Combine(root, "PointerDelegate.dll");
-            var taril2cpp = System.IO.Path.Combine(root, "PointerDelegate.hybridclr.dll"); // when using with hybridclr, we need to seperately do the calli and calldel.
 
             var asm = AssemblyDefinition.ReadAssembly(srcDll);
             var module = asm.MainModule;
