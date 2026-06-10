@@ -31,7 +31,7 @@ namespace TestPointerDelegate
             Func<IntPtr, IntPtr> del2 = TestFunc2;
             // Pass3
             {
-                var invoker1 = new PointerFunc<IntPtr, IntPtr>(del2);
+                var invoker1 = new FreeFunc<IntPtr, IntPtr>(del2);
                 Console.WriteLine(invoker1.Invoke(ref a));
                 Console.WriteLine(invoker1.Invoke(b));
                 Console.WriteLine("------------------------------------------------------------------------");
@@ -39,7 +39,7 @@ namespace TestPointerDelegate
             Func<ByRefParam, IntPtr> del3 = TestFunc3;
             // Pass4
             {
-                var invoker1 = new PointerFunc<IntPtr, ByRefParam>(del3);
+                var invoker1 = new FreeFunc<IntPtr, ByRefParam>(del3);
                 Console.WriteLine(invoker1.Invoke(ref a));
                 Console.WriteLine(invoker1.Invoke(b));
                 Console.WriteLine("------------------------------------------------------------------------");
