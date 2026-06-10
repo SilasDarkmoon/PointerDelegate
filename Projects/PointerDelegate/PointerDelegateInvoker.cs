@@ -76,84 +76,84 @@ namespace Mod.LowLevel
     }
     #endregion
 
-    public interface IUnifiedInvoker { }
-    #region IUnifiedFuncInvoker
-    public interface IUnifiedFuncInvoker<R> : IUnifiedInvoker
-    {
-        R Invoke();
-    }
-    public interface IUnifiedFuncInvoker<R, P1> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15);
-    }
-    public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16> : IUnifiedInvoker
-    {
-        R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16);
-    }
-    #endregion
+    //public interface IUnifiedInvoker { }
+    //#region IUnifiedFuncInvoker
+    //public interface IUnifiedFuncInvoker<R> : IUnifiedInvoker
+    //{
+    //    R Invoke();
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15);
+    //}
+    //public interface IUnifiedFuncInvoker<R, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16> : IUnifiedInvoker
+    //{
+    //    R Invoke(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16);
+    //}
+    //#endregion
 
-    public abstract class UnifiedInvoker : IUnifiedInvoker
-    {
-        protected IFreeInvokable _FreeInvokable;
-        protected UnifiedInvoker() { }
-        protected UnifiedInvoker(IFreeInvokable invokable) { _FreeInvokable = invokable; }
-    }
+    //public abstract class UnifiedInvoker : IUnifiedInvoker
+    //{
+    //    protected IFreeInvokable _FreeInvokable;
+    //    protected UnifiedInvoker() { }
+    //    protected UnifiedInvoker(IFreeInvokable invokable) { _FreeInvokable = invokable; }
+    //}
 
     //public class UnifiedFuncInvoker<R> : UnifiedInvoker, IUnifiedFuncInvoker<R>
     //{
