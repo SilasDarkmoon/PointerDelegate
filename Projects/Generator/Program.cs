@@ -1,5 +1,6 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -563,34 +564,80 @@ namespace Generator
         static void InjectFakeConvert(ModuleDefinition module)
         {
             var type = module.GetType("Mod.LowLevel.PointerDelegateExtensions");
-            var mtoref = type.GetMethod("ToRef");
-            mtoref.Body.Variables.Clear();
-            mtoref.Body.Instructions.Clear();
+            var torefmethods = type.GetMethods("ToRef");
+            foreach (var mtoref in torefmethods)
             {
-                var vrv = new VariableDefinition(mtoref.ReturnType);
-                mtoref.Body.Variables.Add(vrv);
-                var emitter = mtoref.Body.GetILProcessor();
-                emitter.Emit(OpCodes.Ldloca, 0);
-                emitter.Emit(OpCodes.Ldarga, 0);
-                emitter.Emit(OpCodes.Ldind_Ref);
-                emitter.Emit(OpCodes.Stind_Ref);
-                emitter.Emit(OpCodes.Ldloc_0);
-                emitter.Emit(OpCodes.Ret);
+                if (mtoref.Parameters.Count == 1 && mtoref.Parameters[0].ParameterType.Name == "ByRefParam")
+                {
+                    mtoref.Body.Variables.Clear();
+                    mtoref.Body.Instructions.Clear();
+                    {
+                        var vrv = new VariableDefinition(mtoref.ReturnType);
+                        mtoref.Body.Variables.Add(vrv);
+                        var emitter = mtoref.Body.GetILProcessor();
+                        emitter.Emit(OpCodes.Ldloca, 0);
+                        emitter.Emit(OpCodes.Ldarga, 0);
+                        emitter.Emit(OpCodes.Ldind_Ref);
+                        emitter.Emit(OpCodes.Stind_Ref);
+                        emitter.Emit(OpCodes.Ldloc_0);
+                        emitter.Emit(OpCodes.Ret);
+                    }
+                }
+                else if (mtoref.Parameters.Count == 1 && mtoref.Parameters[0].ParameterType.Name == "ByRefPtr")
+                {
+                    mtoref.Body.Variables.Clear();
+                    mtoref.Body.Instructions.Clear();
+                    {
+                        var vrv = new VariableDefinition(mtoref.ReturnType);
+                        var vrp = new VariableDefinition(module.TypeSystem.Object.MakeByReferenceType());
+                        mtoref.Body.Variables.Add(vrv);
+                        mtoref.Body.Variables.Add(vrp);
+                        var emitter = mtoref.Body.GetILProcessor();
+                        emitter.Emit(OpCodes.Ldarga, 0);
+                        emitter.Emit(OpCodes.Stloc_1);
+
+                        emitter.Emit(OpCodes.Ldloca, 0);
+                        emitter.Emit(OpCodes.Ldloc_1);
+                        emitter.Emit(OpCodes.Ldind_Ref);
+                        emitter.Emit(OpCodes.Stind_Ref);
+                        emitter.Emit(OpCodes.Ldloc_0);
+                        emitter.Emit(OpCodes.Ret);
+                    }
+                }
             }
-            var mtofake = type.GetMethod("ToFakeRefObj");
-            var faketype = module.GetType("Mod.LowLevel.ByRefParam");
-            mtofake.Body.Instructions.Clear();
-            mtofake.Body.Variables.Clear();
             {
-                var vrv = new VariableDefinition(faketype);
-                mtofake.Body.Variables.Add(vrv);
-                var emitter = mtofake.Body.GetILProcessor();
-                emitter.Emit(OpCodes.Ldloca, 0);
-                emitter.Emit(OpCodes.Ldarga, 0);
-                emitter.Emit(OpCodes.Ldind_Ref);
-                emitter.Emit(OpCodes.Stind_Ref);
-                emitter.Emit(OpCodes.Ldloc_0);
-                emitter.Emit(OpCodes.Ret);
+                var mtofake = type.GetMethod("ToFakeRefObj");
+                var faketype = module.GetType("Mod.LowLevel.ByRefParam");
+                mtofake.Body.Instructions.Clear();
+                mtofake.Body.Variables.Clear();
+                {
+                    var vrv = new VariableDefinition(faketype);
+                    mtofake.Body.Variables.Add(vrv);
+                    var emitter = mtofake.Body.GetILProcessor();
+                    emitter.Emit(OpCodes.Ldloca, 0);
+                    emitter.Emit(OpCodes.Ldarga, 0);
+                    emitter.Emit(OpCodes.Ldind_Ref);
+                    emitter.Emit(OpCodes.Stind_Ref);
+                    emitter.Emit(OpCodes.Ldloc_0);
+                    emitter.Emit(OpCodes.Ret);
+                }
+            }
+            {
+                var mtofake = type.GetMethod("ToFakeRefPtr");
+                var faketype = module.GetType("Mod.LowLevel.ByRefPtr");
+                mtofake.Body.Instructions.Clear();
+                mtofake.Body.Variables.Clear();
+                {
+                    var vrv = new VariableDefinition(faketype);
+                    mtofake.Body.Variables.Add(vrv);
+                    var emitter = mtofake.Body.GetILProcessor();
+                    emitter.Emit(OpCodes.Ldloca, 0);
+                    emitter.Emit(OpCodes.Ldarga, 0);
+                    emitter.Emit(OpCodes.Ldind_Ref);
+                    emitter.Emit(OpCodes.Stind_Ref);
+                    emitter.Emit(OpCodes.Ldloc_0);
+                    emitter.Emit(OpCodes.Ret);
+                }
             }
         }
     }

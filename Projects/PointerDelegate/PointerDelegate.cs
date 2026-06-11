@@ -11,6 +11,10 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
+        public static ref T ToRef<T>(this ByRefPtr fakeptr)
+        {
+            throw new NotImplementedException();
+        }
         public static ByRefParam ToFakeRefObj<T>(ref T r)
         {
             throw new NotImplementedException();
@@ -18,6 +22,14 @@ namespace Mod.LowLevel
         public static ByRefParam ToFakeObj<T>(this ref T r) where T : struct
         {
             return ToFakeRefObj(ref r);
+        }
+        public static ByRefPtr ToFakeRefPtr<T>(ref T r)
+        {
+            throw new NotImplementedException();
+        }
+        public static ByRefPtr ToRefPtr<T>(this ref T r) where T : struct
+        {
+            return ToFakeRefPtr(ref r);
         }
     }
 
@@ -27,6 +39,13 @@ namespace Mod.LowLevel
     public sealed class ByRefParam
     {
         private ByRefParam() { }
+    }
+    /// <summary>
+    /// Use this to indicate an parameter is a by-ref parameter. Used when method receives or returns a IntPtr, but caller passes or expects a ref parameter.
+    /// </summary>
+    public struct ByRefPtr
+    {
+        private object _InnerRef;
     }
     /// <summary>
     /// Use this to indicate the func will return nothing.
@@ -72,7 +91,7 @@ namespace Mod.LowLevel
             {
                 return 0;
             }
-            else if (ut == typeof(ByRefParam))
+            else if (ut == typeof(ByRefParam) || ut == typeof(ByRefPtr))
             {
                 return 2;
             }
@@ -99,7 +118,7 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1>(in P1 p1);
     }
@@ -108,8 +127,8 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2>(in P1 p1, in P2 p2);
     }
@@ -118,9 +137,9 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3>(in P1 p1, in P2 p2, in P3 p3);
     }
@@ -129,10 +148,10 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4>(in P1 p1, in P2 p2, in P3 p3, in P4 p4);
     }
@@ -141,11 +160,11 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5);
     }
@@ -154,12 +173,12 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6);
     }
@@ -168,13 +187,13 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
-            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam) || typeof(U7) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6, P7>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7);
     }
@@ -183,14 +202,14 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
-            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
-            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam) || typeof(U7) == typeof(ByRefPtr));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam) || typeof(U8) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8);
     }
@@ -199,15 +218,15 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
-            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
-            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
-            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam) || typeof(U7) == typeof(ByRefPtr));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam) || typeof(U8) == typeof(ByRefPtr));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam) || typeof(U9) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9);
     }
@@ -216,16 +235,16 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
-            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
-            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
-            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
-            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam) || typeof(U7) == typeof(ByRefPtr));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam) || typeof(U8) == typeof(ByRefPtr));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam) || typeof(U9) == typeof(ByRefPtr));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam) || typeof(U10) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10);
     }
@@ -234,17 +253,17 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
-            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
-            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
-            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
-            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
-            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam) || typeof(U7) == typeof(ByRefPtr));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam) || typeof(U8) == typeof(ByRefPtr));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam) || typeof(U9) == typeof(ByRefPtr));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam) || typeof(U10) == typeof(ByRefPtr));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam) || typeof(U11) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11);
     }
@@ -253,18 +272,18 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
-            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
-            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
-            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
-            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
-            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
-            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam) || typeof(U7) == typeof(ByRefPtr));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam) || typeof(U8) == typeof(ByRefPtr));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam) || typeof(U9) == typeof(ByRefPtr));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam) || typeof(U10) == typeof(ByRefPtr));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam) || typeof(U11) == typeof(ByRefPtr));
+            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam) || typeof(U12) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12);
     }
@@ -273,19 +292,19 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
-            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
-            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
-            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
-            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
-            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
-            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam));
-            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam) || typeof(U7) == typeof(ByRefPtr));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam) || typeof(U8) == typeof(ByRefPtr));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam) || typeof(U9) == typeof(ByRefPtr));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam) || typeof(U10) == typeof(ByRefPtr));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam) || typeof(U11) == typeof(ByRefPtr));
+            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam) || typeof(U12) == typeof(ByRefPtr));
+            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam) || typeof(U13) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13);
     }
@@ -294,20 +313,20 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
-            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
-            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
-            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
-            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
-            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
-            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam));
-            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam));
-            SetRefParamFlag(13, typeof(U14) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam) || typeof(U7) == typeof(ByRefPtr));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam) || typeof(U8) == typeof(ByRefPtr));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam) || typeof(U9) == typeof(ByRefPtr));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam) || typeof(U10) == typeof(ByRefPtr));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam) || typeof(U11) == typeof(ByRefPtr));
+            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam) || typeof(U12) == typeof(ByRefPtr));
+            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam) || typeof(U13) == typeof(ByRefPtr));
+            SetRefParamFlag(13, typeof(U14) == typeof(ByRefParam) || typeof(U14) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14);
     }
@@ -316,21 +335,21 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
-            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
-            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
-            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
-            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
-            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
-            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam));
-            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam));
-            SetRefParamFlag(13, typeof(U14) == typeof(ByRefParam));
-            SetRefParamFlag(14, typeof(U15) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam) || typeof(U7) == typeof(ByRefPtr));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam) || typeof(U8) == typeof(ByRefPtr));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam) || typeof(U9) == typeof(ByRefPtr));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam) || typeof(U10) == typeof(ByRefPtr));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam) || typeof(U11) == typeof(ByRefPtr));
+            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam) || typeof(U12) == typeof(ByRefPtr));
+            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam) || typeof(U13) == typeof(ByRefPtr));
+            SetRefParamFlag(13, typeof(U14) == typeof(ByRefParam) || typeof(U14) == typeof(ByRefPtr));
+            SetRefParamFlag(14, typeof(U15) == typeof(ByRefParam) || typeof(U15) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15);
     }
@@ -339,22 +358,22 @@ namespace Mod.LowLevel
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
-            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam));
-            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam));
-            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam));
-            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam));
-            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam));
-            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam));
-            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam));
-            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam));
-            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam));
-            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam));
-            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam));
-            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam));
-            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam));
-            SetRefParamFlag(13, typeof(U14) == typeof(ByRefParam));
-            SetRefParamFlag(14, typeof(U15) == typeof(ByRefParam));
-            SetRefParamFlag(15, typeof(U16) == typeof(ByRefParam));
+            SetRefParamFlag(0, typeof(U1) == typeof(ByRefParam) || typeof(U1) == typeof(ByRefPtr));
+            SetRefParamFlag(1, typeof(U2) == typeof(ByRefParam) || typeof(U2) == typeof(ByRefPtr));
+            SetRefParamFlag(2, typeof(U3) == typeof(ByRefParam) || typeof(U3) == typeof(ByRefPtr));
+            SetRefParamFlag(3, typeof(U4) == typeof(ByRefParam) || typeof(U4) == typeof(ByRefPtr));
+            SetRefParamFlag(4, typeof(U5) == typeof(ByRefParam) || typeof(U5) == typeof(ByRefPtr));
+            SetRefParamFlag(5, typeof(U6) == typeof(ByRefParam) || typeof(U6) == typeof(ByRefPtr));
+            SetRefParamFlag(6, typeof(U7) == typeof(ByRefParam) || typeof(U7) == typeof(ByRefPtr));
+            SetRefParamFlag(7, typeof(U8) == typeof(ByRefParam) || typeof(U8) == typeof(ByRefPtr));
+            SetRefParamFlag(8, typeof(U9) == typeof(ByRefParam) || typeof(U9) == typeof(ByRefPtr));
+            SetRefParamFlag(9, typeof(U10) == typeof(ByRefParam) || typeof(U10) == typeof(ByRefPtr));
+            SetRefParamFlag(10, typeof(U11) == typeof(ByRefParam) || typeof(U11) == typeof(ByRefPtr));
+            SetRefParamFlag(11, typeof(U12) == typeof(ByRefParam) || typeof(U12) == typeof(ByRefPtr));
+            SetRefParamFlag(12, typeof(U13) == typeof(ByRefParam) || typeof(U13) == typeof(ByRefPtr));
+            SetRefParamFlag(13, typeof(U14) == typeof(ByRefParam) || typeof(U14) == typeof(ByRefPtr));
+            SetRefParamFlag(14, typeof(U15) == typeof(ByRefParam) || typeof(U15) == typeof(ByRefPtr));
+            SetRefParamFlag(15, typeof(U16) == typeof(ByRefParam) || typeof(U16) == typeof(ByRefPtr));
         }
         public abstract R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16);
     }
