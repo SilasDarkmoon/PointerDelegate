@@ -189,7 +189,7 @@ namespace Generator
             var asm = AssemblyDefinition.ReadAssembly(srcDll);
             var module = asm.MainModule;
 
-            var baseType = module.GetType("Mod.LowLevel.FreeInvokable");
+            var baseType = module.GetType("Mod.LowLevel.FreeInvokableBase");
             var retcField = baseType.GetField("_ReturnCategory");
             var getRefParamFlagRef = module.ImportReference(baseType.GetMethod("GetRefParamFlag"));
 
@@ -563,7 +563,7 @@ namespace Generator
 
         static void InjectFakeConvert(ModuleDefinition module)
         {
-            var type = module.GetType("Mod.LowLevel.PointerDelegateExtensions");
+            var type = module.GetType("Mod.LowLevel.FreeInvokable");
             var torefmethods = type.GetMethods("ToRef");
             foreach (var mtoref in torefmethods)
             {
