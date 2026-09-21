@@ -799,30 +799,30 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r);
+            if (del == null)
+            {
+                return ref InvokeFallback(out r);
+            }
+            else
+            {
+                return ref del(_Pfn, out r);
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r)
+        protected ref R InvokeFallback(out R r)
         {
             var fallback = Invoke();
             r = fallback;
@@ -858,32 +858,34 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1)
+        protected ref R InvokeFallback(out R r, in U1 p1)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var fallback = Invoke(u1);
@@ -920,33 +922,36 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -984,34 +989,38 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1050,35 +1059,40 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1118,36 +1132,42 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1188,37 +1208,44 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1260,38 +1287,46 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
-                , in ConvertRef<P7, U7>(in p7)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1334,39 +1369,48 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
-                , in ConvertRef<P7, U7>(in p7)
-                , in ConvertRef<P8, U8>(in p8)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1410,40 +1454,50 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
-                , in ConvertRef<P7, U7>(in p7)
-                , in ConvertRef<P8, U8>(in p8)
-                , in ConvertRef<P9, U9>(in p9)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1488,41 +1542,52 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
-                , in ConvertRef<P7, U7>(in p7)
-                , in ConvertRef<P8, U8>(in p8)
-                , in ConvertRef<P9, U9>(in p9)
-                , in ConvertRef<P10, U10>(in p10)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1568,42 +1633,54 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
-                , in ConvertRef<P7, U7>(in p7)
-                , in ConvertRef<P8, U8>(in p8)
-                , in ConvertRef<P9, U9>(in p9)
-                , in ConvertRef<P10, U10>(in p10)
-                , in ConvertRef<P11, U11>(in p11)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1650,43 +1727,56 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
-                , in ConvertRef<P7, U7>(in p7)
-                , in ConvertRef<P8, U8>(in p8)
-                , in ConvertRef<P9, U9>(in p9)
-                , in ConvertRef<P10, U10>(in p10)
-                , in ConvertRef<P11, U11>(in p11)
-                , in ConvertRef<P12, U12>(in p12)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1734,44 +1824,58 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
-                , in ConvertRef<P7, U7>(in p7)
-                , in ConvertRef<P8, U8>(in p8)
-                , in ConvertRef<P9, U9>(in p9)
-                , in ConvertRef<P10, U10>(in p10)
-                , in ConvertRef<P11, U11>(in p11)
-                , in ConvertRef<P12, U12>(in p12)
-                , in ConvertRef<P13, U13>(in p13)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1820,45 +1924,60 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
-                , in ConvertRef<P7, U7>(in p7)
-                , in ConvertRef<P8, U8>(in p8)
-                , in ConvertRef<P9, U9>(in p9)
-                , in ConvertRef<P10, U10>(in p10)
-                , in ConvertRef<P11, U11>(in p11)
-                , in ConvertRef<P12, U12>(in p12)
-                , in ConvertRef<P13, U13>(in p13)
-                , in ConvertRef<P14, U14>(in p14)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1908,46 +2027,62 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
-                , in ConvertRef<P7, U7>(in p7)
-                , in ConvertRef<P8, U8>(in p8)
-                , in ConvertRef<P9, U9>(in p9)
-                , in ConvertRef<P10, U10>(in p10)
-                , in ConvertRef<P11, U11>(in p11)
-                , in ConvertRef<P12, U12>(in p12)
-                , in ConvertRef<P13, U13>(in p13)
-                , in ConvertRef<P14, U14>(in p14)
-                , in ConvertRef<P15, U15>(in p15)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                    , in ConvertRef<P15, U15>(in p15)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                    , in ConvertRef<P15, U15>(in p15)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1998,47 +2133,64 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15), typeof(U16) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15), typeof(U16) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Pfn, out r
-                , in ConvertRef<P1, U1>(in p1)
-                , in ConvertRef<P2, U2>(in p2)
-                , in ConvertRef<P3, U3>(in p3)
-                , in ConvertRef<P4, U4>(in p4)
-                , in ConvertRef<P5, U5>(in p5)
-                , in ConvertRef<P6, U6>(in p6)
-                , in ConvertRef<P7, U7>(in p7)
-                , in ConvertRef<P8, U8>(in p8)
-                , in ConvertRef<P9, U9>(in p9)
-                , in ConvertRef<P10, U10>(in p10)
-                , in ConvertRef<P11, U11>(in p11)
-                , in ConvertRef<P12, U12>(in p12)
-                , in ConvertRef<P13, U13>(in p13)
-                , in ConvertRef<P14, U14>(in p14)
-                , in ConvertRef<P15, U15>(in p15)
-                , in ConvertRef<P16, U16>(in p16)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                    , in ConvertRef<P15, U15>(in p15)
+                    , in ConvertRef<P16, U16>(in p16)
                 );
+            }
+            else
+            {
+                return ref del(_Pfn, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                    , in ConvertRef<P15, U15>(in p15)
+                    , in ConvertRef<P16, U16>(in p16)
+                    );
+            }
         }
-        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15, in U16 p16)
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15, in U16 p16)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -2078,6 +2230,9 @@ namespace Mod.LowLevel
         // ConvertParam<P, U>(P p) — the 1-arg generic overload on FreeInvokableBase
         // (bit-pattern reinterpretation: returns U whose bits are p's pointer value).
         static readonly System.Reflection.MethodInfo s_convertParam1;
+        // ConvertAddressToRef<T>(IntPtr address) — the IntPtr-arg generic overload on
+        // FreeInvokableBase (returns ref T pointing at address).
+        static readonly System.Reflection.MethodInfo s_convertAddressToRef;
 
         static FreeFuncEmit()
         {
@@ -2086,56 +2241,126 @@ namespace Mod.LowLevel
                 System.Reflection.BindingFlags.NonPublic |
                 System.Reflection.BindingFlags.Static))
             {
-                if (m.Name == "ConvertParam" && m.IsGenericMethodDefinition
-                    && m.GetParameters().Length == 1)
+                if (!m.IsGenericMethodDefinition || m.GetParameters().Length != 1)
+                    continue;
+                if (m.Name == "ConvertParam")
                 {
                     s_convertParam1 = m;
-                    break;
+                }
+                else if (m.Name == "ConvertAddressToRef" && m.GetParameters()[0].ParameterType == typeof(IntPtr))
+                {
+                    s_convertAddressToRef = m;
                 }
             }
         }
 
-        // Emits DynamicInvoke: ref R (IntPtr pfn, out R r, in U1 u1, ..., in Un un).
+        // Emits DynamicInvoke: ref R (Delegate del, out R r, in U1 u1, ..., in Un un).
+        // Calls delType.Invoke via callvirt (delType = Func<U1..Un, R> or Action<U1..Un>).
         // All flag decisions are made HERE at emit time — the emitted IL is a single
-        // straight-line calli plus return-value massaging, no branches.
-        public static DynamicMethod EmitDynamicInvoker(Type delType, Type returnType, Type[] Ux, int returnFlag, uint paramFlags)
+        // straight-line callvirt plus return-value massaging, no branches.
+        // Returns MethodInfo (DynamicMethod on CoreCLR; a collectible-AssemblyBuilder
+        // static method on .NET Framework, where DynamicMethod rejects ByRef returns).
+        public static System.Reflection.MethodInfo EmitDynamicInvoker(Type delType, Type returnType, Type[] Ux, int returnFlag, uint paramFlags)
         {
-            // arg 0 = pfn, arg 1 = r (R&), arg 2+i = ux (Ux&).
+            // delType default: the Action<> family over Ux.
+            if (delType == null)
+                delType = Ux.Length == 0 ? typeof(Action)
+                    : Type.GetType("System.Action`" + Ux.Length).MakeGenericType(Ux);
+            var invoke = delType.GetMethod("Invoke");
+            bool is_action = invoke.ReturnType == typeof(void);
+
+            // arg 0 = del (Delegate), arg 1 = r (R&), arg 2+i = ux (Ux&).
             var paramTypes = new Type[2 + Ux.Length];
-            paramTypes[0] = typeof(IntPtr);
+            paramTypes[0] = typeof(Delegate);
             paramTypes[1] = returnType.MakeByRefType();
             for (int i = 0; i < Ux.Length; i++)
                 paramTypes[2 + i] = Ux[i].MakeByRefType();
 
-            var dm = new DynamicMethod("DynamicInvoke", returnType.MakeByRefType(), paramTypes,
-                typeof(FreeInvokableBase), true);
-            var il = dm.GetILGenerator();
+            try
+            {
+                var dm = new DynamicMethod("DynamicInvoke", returnType.MakeByRefType(), paramTypes,
+                    typeof(FreeInvokableBase), true);
+                EmitBody(dm.GetILGenerator(), delType, returnType, Ux, returnFlag, paramFlags, invoke, is_action);
+                return dm;
+            }
+            catch (NotSupportedException)
+            {
+                // .NET Framework: DynamicMethod.Init rejects ByRef return types.
+                // Fall back to a collectible AssemblyBuilder method (MethodBuilder allows
+                // ByRef returns). The emitted type derives from FreeInvokableBase so the
+                // protected static conversion primitives (ConvertParam etc.) stay callable.
+                var ab = CreateCollectibleBuilder("FreeFuncEmit_" + Guid.NewGuid().ToString("N"));
+                var mod = ab.DefineDynamicModule("FreeFuncEmitMod");
+                var type = mod.DefineType("FreeFuncEmitType",
+                    System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed,
+                    typeof(FreeInvokableBase));
+                var mb = type.DefineMethod("DynamicInvoke",
+                    System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
+                    returnType.MakeByRefType(), paramTypes);
+                EmitBody(mb.GetILGenerator(), delType, returnType, Ux, returnFlag, paramFlags, invoke, is_action);
+                return CreateBuilderType(type).GetMethod("DynamicInvoke");
+            }
+        }
 
-            // Push params: ByRef → ldarg (pass the Ux& itself); ByValue → ldarg + ldobj Ux.
-            // The callsite matches exactly what was pushed.
-            var callSiteParams = new Type[Ux.Length];
+        // netstandard2.0's AppDomain ref lacks DefineDynamicAssembly; reflect it (present
+        // on the .NET Framework runtime, which is the only path reaching this fallback).
+        static System.Reflection.MethodInfo s_defineDynamicAssembly;
+        static System.Reflection.Emit.AssemblyBuilder CreateCollectibleBuilder(string name)
+        {
+            if (s_defineDynamicAssembly == null)
+            {
+                s_defineDynamicAssembly = typeof(AppDomain).GetMethod("DefineDynamicAssembly",
+                    new[] { typeof(AssemblyName), typeof(System.Reflection.Emit.AssemblyBuilderAccess) });
+            }
+            return (System.Reflection.Emit.AssemblyBuilder)s_defineDynamicAssembly.Invoke(
+                AppDomain.CurrentDomain,
+                new object[] { new AssemblyName(name), System.Reflection.Emit.AssemblyBuilderAccess.RunAndCollect });
+        }
+
+        // netstandard2.0's TypeBuilder ref lacks CreateType — same reflective treatment.
+        static System.Reflection.MethodInfo s_createType;
+        static Type CreateBuilderType(System.Reflection.Emit.TypeBuilder type)
+        {
+            if (s_createType == null)
+                s_createType = typeof(System.Reflection.Emit.TypeBuilder).GetMethod("CreateType");
+            return (Type)s_createType.Invoke(type, null);
+        }
+
+        static void EmitBody(System.Reflection.Emit.ILGenerator il, Type delType, Type returnType, Type[] Ux,
+            int returnFlag, uint paramFlags, System.Reflection.MethodInfo invoke, bool is_action)
+        {
+            // Receiver first: (delType)del.
+            il.Emit(OpCodes.Ldarg, 0);
+            il.Emit(OpCodes.Castclass, delType);
+
+            // Push params — the callsite is delType.Invoke(U1, ..., Un), always by value:
+            // ByRef → the delegate receives the ADDRESS of the slot
+            //         (conv.u + ConvertParam<IntPtr, Ux> bit-reinterpretation);
+            // ByValue → ldobj Ux (the slot's contents).
             for (int i = 0; i < Ux.Length; i++)
             {
                 il.Emit(OpCodes.Ldarg, 2 + i);
                 if (FreeInvokableBase.GetRefParamFlag(paramFlags, i))
                 {
-                    callSiteParams[i] = Ux[i].MakeByRefType();
+                    il.Emit(OpCodes.Conv_U);
+                    il.Emit(OpCodes.Call, s_convertParam1.MakeGenericMethod(typeof(IntPtr), Ux[i]));
                 }
                 else
                 {
                     il.Emit(OpCodes.Ldobj, Ux[i]);
-                    callSiteParams[i] = Ux[i];
                 }
             }
 
-            // Push the function pointer, then calli.
-            il.Emit(OpCodes.Ldarg, 0);
+            il.Emit(OpCodes.Callvirt, invoke);
+            // Stack: [R] (Func) or [] (Action).
 
-            if (returnFlag == 0)
+            if (is_action || returnFlag == 0)
             {
-                // void: calli void(...); r = default; return ref r;
-                il.EmitCalli(OpCodes.Calli, System.Reflection.CallingConventions.Standard,
-                    typeof(void), callSiteParams, null);
+                // Nothing usable from the call: Action leaves nothing (returnFlag 1/2 →
+                // fabricate a default R / ref R), Func + returnFlag 0 → discard the result.
+                if (!is_action)
+                    il.Emit(OpCodes.Pop);
+                // r = default; return ref r;
                 il.Emit(OpCodes.Ldarg, 1);
                 il.Emit(OpCodes.Initobj, returnType);
                 il.Emit(OpCodes.Ldarg, 1);
@@ -2143,9 +2368,7 @@ namespace Mod.LowLevel
             }
             else if (returnFlag == 1)
             {
-                // by-value: calli R(...); r = calli_return; return ref r;
-                il.EmitCalli(OpCodes.Calli, System.Reflection.CallingConventions.Standard,
-                    returnType, callSiteParams, null);
+                // by-value: r = invoke_return; return ref r;
                 var tmp = il.DeclareLocal(returnType);
                 il.Emit(OpCodes.Stloc, tmp);
                 il.Emit(OpCodes.Ldarg, 1);
@@ -2156,26 +2379,19 @@ namespace Mod.LowLevel
             }
             else
             {
-                // by-ref: calli ref R(...);
-                //          r = ConvertParam<IntPtr, R>((IntPtr)(void*)calli_return);
-                //          return ref calli_return;
-                il.EmitCalli(OpCodes.Calli, System.Reflection.CallingConventions.Standard,
-                    returnType.MakeByRefType(), callSiteParams, null);
+                // by-ref: the Func's R return value IS an address.
+                // r = value; return ref ConvertAddressToRef<R>(ConvertParam<R, IntPtr>(value));
                 var tmp = il.DeclareLocal(returnType);
-                // Stack: [R&]. dup → [R&, R&]; conv.u → [R&, native int];
-                // call ConvertParam<IntPtr, R>(ptr) → [R&, R].
-                il.Emit(OpCodes.Dup);
-                il.Emit(OpCodes.Conv_U);
-                il.Emit(OpCodes.Call, s_convertParam1.MakeGenericMethod(typeof(IntPtr), returnType));
                 il.Emit(OpCodes.Stloc, tmp);
                 il.Emit(OpCodes.Ldarg, 1);
                 il.Emit(OpCodes.Ldloc, tmp);
                 il.Emit(OpCodes.Stobj, returnType);
-                // Stack: [R&] — return ref calli_return.
+                // Stack: [] — rebuild the return: value → IntPtr bits → ref R at that address.
+                il.Emit(OpCodes.Ldloc, tmp);
+                il.Emit(OpCodes.Call, s_convertParam1.MakeGenericMethod(returnType, typeof(IntPtr)));
+                il.Emit(OpCodes.Call, s_convertAddressToRef.MakeGenericMethod(returnType));
                 il.Emit(OpCodes.Ret);
             }
-
-            return dm;
         }
     }
     public class FreeFunc<R> : FreeInvokable<R>
@@ -2210,30 +2426,30 @@ namespace Mod.LowLevel
             emitkey |= _RefParamFlags;
             if (_Del is Func<R>)
                 emitkey |= 1UL << 34;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action), typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action), typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Del, out r);
+            if (del == null)
+            {
+                return ref InvokeFallback(out r);
+            }
+            else
+            {
+                return ref del(_Del, out r);
+            }
         }
-        protected ref R InvokeFallback(Delegate pfn, out R r)
+        protected ref R InvokeFallback(out R r)
         {
             var fallback = Invoke();
             r = fallback;
@@ -2281,34 +2497,36 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
-            if (_Del is Func<R, U1>)
+            if (_Del is Func<U1, R>)
                 emitkey |= 1UL << 34;
-            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
-                bool disabled_emit = _IsDynamicCodeDisabled;
-                if (!disabled_emit)
+                try
                 {
-                    try
-                    {
-                        var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1>), typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
-                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
-                    }
-                    catch (Exception)
-                    {
-                        _IsDynamicCodeDisabled = disabled_emit = true;
-                    }
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1>), typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
                 }
-                if (disabled_emit)
+                catch (Exception)
                 {
-                    del = InvokeFallback;
+                    _IsDynamicCodeDisabled = true;
                 }
-                del = _EmitCache.GetOrAdd(emitkey, del);
             }
-            return ref del(_Del, out r
-                , in ConvertRef<P1, U1>(in p1)
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
                 );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    );
+            }
         }
-        protected ref R InvokeFallback(Delegate pfn, out R r, in U1 p1)
+        protected ref R InvokeFallback(out R r, in U1 p1)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var fallback = Invoke(u1);
@@ -2329,18 +2547,79 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2> : FreeInvokable<R, U1, U2>
     {
-        protected Func<U1, U2, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2)
         {
-            return _Del(p1, p2);
+            if (_Del is Func<U1, U2, R> func)
+            {
+                return func(p1, p2);
+            }
+            else if (_Del is Action<U1, U2> act)
+            {
+                act(p1, p2);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2>(out R r, in P1 p1, in P2 p2)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2>), typeof(R), new[] { typeof(U1), typeof(U2) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var fallback = Invoke(u1, u2);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2> Clone()
         {
@@ -2349,18 +2628,82 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3> : FreeInvokable<R, U1, U2, U3>
     {
-        protected Func<U1, U2, U3, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3)
         {
-            return _Del(p1, p2, p3);
+            if (_Del is Func<U1, U2, U3, R> func)
+            {
+                return func(p1, p2, p3);
+            }
+            else if (_Del is Action<U1, U2, U3> act)
+            {
+                act(p1, p2, p3);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3>(out R r, in P1 p1, in P2 p2, in P3 p3)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var fallback = Invoke(u1, u2, u3);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3> Clone()
         {
@@ -2369,18 +2712,85 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4> : FreeInvokable<R, U1, U2, U3, U4>
     {
-        protected Func<U1, U2, U3, U4, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
         {
-            return _Del(p1, p2, p3, p4);
+            if (_Del is Func<U1, U2, U3, U4, R> func)
+            {
+                return func(p1, p2, p3, p4);
+            }
+            else if (_Del is Action<U1, U2, U3, U4> act)
+            {
+                act(p1, p2, p3, p4);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var fallback = Invoke(u1, u2, u3, u4);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4> Clone()
         {
@@ -2389,18 +2799,88 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5> : FreeInvokable<R, U1, U2, U3, U4, U5>
     {
-        protected Func<U1, U2, U3, U4, U5, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
         {
-            return _Del(p1, p2, p3, p4, p5);
+            if (_Del is Func<U1, U2, U3, U4, U5, R> func)
+            {
+                return func(p1, p2, p3, p4, p5);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5> act)
+            {
+                act(p1, p2, p3, p4, p5);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var fallback = Invoke(u1, u2, u3, u4, u5);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5> Clone()
         {
@@ -2409,18 +2889,91 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6> : FreeInvokable<R, U1, U2, U3, U4, U5, U6>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
         {
-            return _Del(p1, p2, p3, p4, p5, p6);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6> act)
+            {
+                act(p1, p2, p3, p4, p5, p6);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6> Clone()
         {
@@ -2429,18 +2982,94 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, U7, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6, U7> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
         {
-            return _Del(p1, p2, p3, p4, p5, p6, p7);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6, p7);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6, U7> act)
+            {
+                act(p1, p2, p3, p4, p5, p6, p7);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7> Clone()
         {
@@ -2449,18 +3078,97 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, U7, U8, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
         {
-            return _Del(p1, p2, p3, p4, p5, p6, p7, p8);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6, p7, p8);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6, U7, U8> act)
+            {
+                act(p1, p2, p3, p4, p5, p6, p7, p8);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
+            var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> Clone()
         {
@@ -2469,18 +3177,100 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
         {
-            return _Del(p1, p2, p3, p4, p5, p6, p7, p8, p9);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6, p7, p8, p9);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6, U7, U8, U9> act)
+            {
+                act(p1, p2, p3, p4, p5, p6, p7, p8, p9);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
+            var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
+            var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> Clone()
         {
@@ -2489,18 +3279,103 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
         {
-            return _Del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> act)
+            {
+                act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
+            var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
+            var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
+            var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> Clone()
         {
@@ -2509,18 +3384,106 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
         {
-            return _Del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> act)
+            {
+                act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
+            var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
+            var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
+            var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
+            var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> Clone()
         {
@@ -2529,18 +3492,109 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
         {
-            return _Del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> act)
+            {
+                act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
+            var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
+            var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
+            var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
+            var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
+            var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> Clone()
         {
@@ -2549,18 +3603,112 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
         {
-            return _Del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> act)
+            {
+                act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
+            var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
+            var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
+            var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
+            var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
+            var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
+            var u13 = ConvertParam<U13, U13>(in p13, GetRefParamFlag(12));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> Clone()
         {
@@ -2569,18 +3717,115 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
         {
-            return _Del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> act)
+            {
+                act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
+            var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
+            var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
+            var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
+            var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
+            var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
+            var u13 = ConvertParam<U13, U13>(in p13, GetRefParamFlag(12));
+            var u14 = ConvertParam<U14, U14>(in p14, GetRefParamFlag(13));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> Clone()
         {
@@ -2589,18 +3834,118 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
         {
-            return _Del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> act)
+            {
+                act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14, in U15 u15);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                    , in ConvertRef<P15, U15>(in p15)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                    , in ConvertRef<P15, U15>(in p15)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
+            var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
+            var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
+            var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
+            var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
+            var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
+            var u13 = ConvertParam<U13, U13>(in p13, GetRefParamFlag(12));
+            var u14 = ConvertParam<U14, U14>(in p14, GetRefParamFlag(13));
+            var u15 = ConvertParam<U15, U15>(in p15, GetRefParamFlag(14));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> Clone()
         {
@@ -2609,18 +3954,121 @@ namespace Mod.LowLevel
     }
     public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>
     {
-        protected Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> _Del;
+        protected Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> del)
+        {
+            _Del = del;
+        }
+        public FreeFunc(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> del)
         {
             _Del = del;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
         {
-            return _Del(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16);
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> func)
+            {
+                return func(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16);
+            }
+            else if (_Del is Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> act)
+            {
+                act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16);
+            }
+            return default;
         }
+        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14, in U15 u15, in U16 u16);
+        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R>)
+                emitkey |= 1UL << 34;
+            DynamicInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15), typeof(U16) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = _EmitCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return ref InvokeFallback(out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                    , in ConvertRef<P15, U15>(in p15)
+                    , in ConvertRef<P16, U16>(in p16)
+                );
+            }
+            else
+            {
+                return ref del(_Del, out r
+                    , in ConvertRef<P1, U1>(in p1)
+                    , in ConvertRef<P2, U2>(in p2)
+                    , in ConvertRef<P3, U3>(in p3)
+                    , in ConvertRef<P4, U4>(in p4)
+                    , in ConvertRef<P5, U5>(in p5)
+                    , in ConvertRef<P6, U6>(in p6)
+                    , in ConvertRef<P7, U7>(in p7)
+                    , in ConvertRef<P8, U8>(in p8)
+                    , in ConvertRef<P9, U9>(in p9)
+                    , in ConvertRef<P10, U10>(in p10)
+                    , in ConvertRef<P11, U11>(in p11)
+                    , in ConvertRef<P12, U12>(in p12)
+                    , in ConvertRef<P13, U13>(in p13)
+                    , in ConvertRef<P14, U14>(in p14)
+                    , in ConvertRef<P15, U15>(in p15)
+                    , in ConvertRef<P16, U16>(in p16)
+                    );
+            }
+        }
+        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15, in U16 p16)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
+            var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
+            var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
+            var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
+            var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
+            var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
+            var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
+            var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
+            var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
+            var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
+            var u13 = ConvertParam<U13, U13>(in p13, GetRefParamFlag(12));
+            var u14 = ConvertParam<U14, U14>(in p14, GetRefParamFlag(13));
+            var u15 = ConvertParam<U15, U15>(in p15, GetRefParamFlag(14));
+            var u16 = ConvertParam<U16, U16>(in p16, GetRefParamFlag(15));
+            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> Clone()
         {

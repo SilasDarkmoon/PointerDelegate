@@ -177,7 +177,6 @@ namespace Generator
         {
             Ignore = 0,
             Pointer,
-            Func,
         }
 
         static void Main(string[] args)
@@ -275,8 +274,7 @@ namespace Generator
         static DelegateCategory GetCategory(string typeName)
         {
             if (typeName.StartsWith("PointerFunc")) return DelegateCategory.Pointer;
-            if (typeName.StartsWith("FreeFunc")) return DelegateCategory.Func;
-            if (typeName.StartsWith("FreeAction")) return DelegateCategory.Func;   // same family, separate injector
+            // FreeFunc/FreeAction are now pure runtime-Emit (FreeFuncEmit) — no injection.
             return DelegateCategory.Ignore;
         }
 
@@ -294,80 +292,6 @@ namespace Generator
                 result.Add(type.GenericParameters[i]);
             }
             return result;
-        }
-
-        static TypeReference GetFuncTypeFromCtor(TypeDefinition type)
-        {
-            foreach (var ctor in type.Methods)
-            {
-                if (!ctor.IsConstructor || ctor.Parameters.Count == 0) continue;
-                var paramType = ctor.Parameters[0].ParameterType;
-                var name = paramType.FullName;
-                if (name.StartsWith("System.Func"))
-                    return paramType;
-            }
-            return null;
-        }
-        static TypeReference GetActionTypeFromCtor(TypeDefinition type)
-        {
-            foreach (var ctor in type.Methods)
-            {
-                if (!ctor.IsConstructor || ctor.Parameters.Count == 0) continue;
-                var paramType = ctor.Parameters[0].ParameterType;
-                var name = paramType.FullName;
-                if (name.StartsWith("System.Action"))
-                    return paramType;
-            }
-            return null;
-        }
-
-        static MethodReference CreateFuncInvokeRef(TypeDefinition type, ModuleDefinition module)
-        {
-            var delTypeRef = GetFuncTypeFromCtor(type);
-            if (delTypeRef is GenericInstanceType git)
-            {
-                var delTypeDef = git.ElementType.Resolve();
-                var invokeMethod = delTypeDef.GetMethod("Invoke");
-                var invokeRef = new MethodReference("Invoke", invokeMethod.ReturnType, delTypeRef);
-                invokeRef.HasThis = invokeMethod.HasThis;
-                foreach (var p in invokeMethod.Parameters)
-                    invokeRef.Parameters.Add(new ParameterDefinition(p.ParameterType));
-                return invokeRef;
-            }
-            else
-            {
-                var delTypeDef = delTypeRef.Resolve();
-                var invokeMethod = delTypeDef.GetMethod("Invoke");
-                var invokeRef = new MethodReference("Invoke", invokeMethod.ReturnType, delTypeRef);
-                invokeRef.HasThis = invokeMethod.HasThis;
-                foreach (var p in invokeMethod.Parameters)
-                    invokeRef.Parameters.Add(new ParameterDefinition(p.ParameterType));
-                return invokeRef;
-            }
-        }
-        static MethodReference CreateActionInvokeRef(TypeDefinition type, ModuleDefinition module)
-        {
-            var delTypeRef = GetActionTypeFromCtor(type);
-            if (delTypeRef is GenericInstanceType git)
-            {
-                var delTypeDef = git.ElementType.Resolve();
-                var invokeMethod = delTypeDef.GetMethod("Invoke");
-                var invokeRef = new MethodReference("Invoke", invokeMethod.ReturnType, delTypeRef);
-                invokeRef.HasThis = invokeMethod.HasThis;
-                foreach (var p in invokeMethod.Parameters)
-                    invokeRef.Parameters.Add(new ParameterDefinition(p.ParameterType));
-                return invokeRef;
-            }
-            else
-            {
-                var delTypeDef = delTypeRef.Resolve();
-                var invokeMethod = delTypeDef.GetMethod("Invoke");
-                var invokeRef = new MethodReference("Invoke", invokeMethod.ReturnType, delTypeRef);
-                invokeRef.HasThis = invokeMethod.HasThis;
-                foreach (var p in invokeMethod.Parameters)
-                    invokeRef.Parameters.Add(new ParameterDefinition(p.ParameterType));
-                return invokeRef;
-            }
         }
 
         static void InjectPointerFuncNonGenericInvoke(MethodDefinition method, TypeDefinition type, FieldDefinition retcField, ModuleDefinition module)
