@@ -1,7 +1,8 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.InteropServices;
+using System.Reflection.Emit;
 
 namespace Mod.LowLevel
 {
@@ -90,11 +91,15 @@ namespace Mod.LowLevel
         protected FreeInvokableBase() { }
 
         protected uint _RefParamFlags;
-        protected bool GetRefParamFlag(int paramIndex)
+        protected static bool GetRefParamFlag(uint flags, int paramIndex)
         {
             //if (paramIndices >= 16 || paramIndices < 0) throw new ArgumentOutOfRangeException(nameof(paramIndices), $"{nameof(paramIndices)} must be [0, 15]");
-            bool flag = (_RefParamFlags & (1u << paramIndex)) != 0;
+            bool flag = (flags & (1u << paramIndex)) != 0;
             return flag;
+        }
+        protected bool GetRefParamFlag(int paramIndex)
+        {
+            return GetRefParamFlag(_RefParamFlags, paramIndex);
         }
         protected void SetRefParamFlag(int paramIndex, bool isRefParam)
         {
@@ -176,6 +181,127 @@ namespace Mod.LowLevel
                 return GetRefParamFlag(index) ? ParamFlag.ByRef : ParamFlag.ByValue;
             }
         }
+
+        #region DynamicGenerator
+        protected static ref T ConvertAddressToRef<T>(IntPtr address)
+        {
+            throw new NotImplementedException();
+        }
+        protected static IntPtr ConvertRefToAddress<T>(in T r)
+        {
+            throw new NotImplementedException();
+        }
+        protected static U ConvertParam<P, U>(P p)
+        {
+            U u = default(U);
+            ref P ru = ref ConvertRef<U, P>(in u);
+            ru = p;
+            return u;
+        }
+
+        protected static U ConvertParam<P, U>(in P p, bool isref)
+        {
+            if (isref)
+            {
+                var address = ConvertRefToAddress(in p);
+                return ConvertParam<IntPtr, U>(address);
+            }
+            else
+            {
+                return ConvertParam<P, U>(p);
+            }
+        }
+        protected static ref R ConvertAddressToRef<R>(R r)
+        {
+            IntPtr address = ConvertParam<R, IntPtr>(r);
+            return ref ConvertAddressToRef<R>(address);
+        }
+        protected static ref T ConvertRef<F, T>(in F f)
+        {
+            IntPtr address = ConvertRefToAddress(in f);
+            return ref ConvertAddressToRef<T>(address);
+        }
+        protected static bool _IsDynamicCodeDisabled = false;
+        //protected struct ParamInfo : IEquatable<ParamInfo>
+        //{
+        //    public Type ParamType;
+        //    public bool IsByRef;
+
+        //    public override int GetHashCode()
+        //    {
+        //        var hash = ParamType?.GetHashCode() ?? 0;
+        //        return IsByRef ? ~hash : hash;
+        //    }
+        //    public bool Equals(ParamInfo other)
+        //    {
+        //        return ParamType == other.ParamType
+        //            && IsByRef == other.IsByRef;
+        //    }
+        //    public override bool Equals(object obj)
+        //    {
+        //        return obj is ParamInfo other && Equals(other);
+        //    }
+        //    public static bool operator==(ParamInfo a, ParamInfo b)
+        //    {
+        //        return a.Equals(b);
+        //    }
+        //    public static bool operator!=(ParamInfo a, ParamInfo b)
+        //    {
+        //        return !a.Equals(b);
+        //    }
+        //}
+        //protected struct ParamInfos : IEquatable<ParamInfos>
+        //{
+        //    public ParamInfo P0;
+        //    public ParamInfo P1;
+        //    public ParamInfo P2;
+        //    public ParamInfo P3;
+        //    public ParamInfo P4;
+        //    public ParamInfo P5;
+        //    public ParamInfo P6;
+        //    public ParamInfo P7;
+        //    public ParamInfo P8;
+        //    public ParamInfo P9;
+        //    public ParamInfo P10;
+        //    public ParamInfo P11;
+        //    public ParamInfo P12;
+        //    public ParamInfo P13;
+        //    public ParamInfo P14;
+        //    public ParamInfo P15;
+        //    public ParamInfo P16;
+
+        //    public override int GetHashCode()
+        //    {
+        //        return P0.GetHashCode() ^ P1.GetHashCode() ^ P2.GetHashCode()
+        //            ^ P3.GetHashCode() ^ P4.GetHashCode() ^ P5.GetHashCode()
+        //            ^ P6.GetHashCode() ^ P7.GetHashCode() ^ P8.GetHashCode()
+        //            ^ P9.GetHashCode() ^ P10.GetHashCode() ^ P11.GetHashCode()
+        //            ^ P12.GetHashCode() ^ P13.GetHashCode() ^ P14.GetHashCode()
+        //            ^ P15.GetHashCode() ^ P16.GetHashCode();
+        //    }
+        //    public bool Equals(ParamInfos other)
+        //    {
+        //        return P0 == other.P0 && P1 == other.P1 && P2 == other.P2
+        //            && P3 == other.P3 && P4 == other.P4 && P5 == other.P5
+        //            && P6 == other.P6 && P7 == other.P7 && P8 == other.P8
+        //            && P9 == other.P9 && P10 == other.P10 && P11 == other.P11
+        //            && P12 == other.P12 && P13 == other.P13 && P14 == other.P14
+        //            && P15 == other.P15 && P16 == other.P16;
+        //    }
+        //    public override bool Equals(object obj)
+        //    {
+        //        return obj is ParamInfos other && Equals(other);
+        //    }
+        //    public static bool operator ==(ParamInfos a, ParamInfos b)
+        //    {
+        //        return a.Equals(b);
+        //    }
+        //    public static bool operator !=(ParamInfos a, ParamInfos b)
+        //    {
+        //        return !a.Equals(b);
+        //    }
+        //}
+        #endregion
     }
     public abstract class FreeInvokable<R> : FreeInvokableBase, IFreeInvokableFunc<R>
     {
@@ -534,6 +660,13 @@ namespace Mod.LowLevel
         }
     }
 
+    internal static class PointerFuncEmit
+    {
+        public static DynamicMethod EmitDynamicInvoker(Type returnType, Type[] Ux, int returnFlag, uint paramFlags)
+        {
+            throw new NotImplementedException();
+        }
+    }
     public class PointerFunc<R> : FreeInvokable<R>
     {
         protected IntPtr _Pfn;
@@ -541,9 +674,52 @@ namespace Mod.LowLevel
         {
             _Pfn = fn;
         }
-        public override ref R Invoke(out R r)
+        public override R Invoke()
         {
             throw new NotImplementedException();
+        }
+        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r);
+        protected static Dictionary<ulong, DynamicInvoker> _EmitCache = new Dictionary<ulong, DynamicInvoker>();
+        public override ref R Invoke(out R r)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            {
+                bool disabled_emit = _IsDynamicCodeDisabled;
+                if (!disabled_emit)
+                {
+                    try
+                    {
+                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
+                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
+                    }
+                    catch (Exception)
+                    {
+                        _IsDynamicCodeDisabled = disabled_emit = true;
+                    }
+                }
+                if (disabled_emit)
+                {
+                    del = InvokeFallback;
+                }
+                _EmitCache[emitkey] = del;
+            }
+            return ref del(_Pfn, out r);
+        }
+        protected ref R InvokeFallback(IntPtr pfn, out R r)
+        {
+            var fallback = Invoke();
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public PointerFunc<R> Clone()
         {
@@ -561,9 +737,51 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
+        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1);
+        protected static Dictionary<ulong, DynamicInvoker> _EmitCache = new Dictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1>(out R r, in P1 p1)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            {
+                bool disabled_emit = _IsDynamicCodeDisabled;
+                if (!disabled_emit)
+                {
+                    try
+                    {
+                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
+                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
+                    }
+                    catch (Exception)
+                    {
+                        _IsDynamicCodeDisabled = disabled_emit = true;
+                    }
+                }
+                if (disabled_emit)
+                {
+                    del = InvokeFallback;
+                }
+                _EmitCache[emitkey] = del;
+            }
+            return ref del(_Pfn, out r
+                , in ConvertRef<P1, U1>(in p1)
+                );
+        }
+        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var fallback = Invoke(u1);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public PointerFunc<R, U1> Clone()
         {
@@ -581,9 +799,53 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
+        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2);
+        protected static Dictionary<ulong, DynamicInvoker> _EmitCache = new Dictionary<ulong, DynamicInvoker>();
         public override ref R Invoke<P1, P2>(out R r, in P1 p1, in P2 p2)
         {
-            throw new NotImplementedException();
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (!_EmitCache.TryGetValue(emitkey, out var del))
+            {
+                bool disabled_emit = _IsDynamicCodeDisabled;
+                if (!disabled_emit)
+                {
+                    try
+                    {
+                        var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2) }, _ReturnCategory, _RefParamFlags);
+                        del = (DynamicInvoker)dm.CreateDelegate(typeof(DynamicInvoker));
+                    }
+                    catch (Exception)
+                    {
+                        _IsDynamicCodeDisabled = disabled_emit = true;
+                    }
+                }
+                if (disabled_emit)
+                {
+                    del = InvokeFallback;
+                }
+                _EmitCache[emitkey] = del;
+            }
+            return ref del(_Pfn, out r
+                , in ConvertRef<P1, U1>(in p1)
+                , in ConvertRef<P2, U2>(in p2)
+                );
+        }
+        protected ref R InvokeFallback(IntPtr pfn, out R r, in U1 p1, in U2 p2)
+        {
+            var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
+            var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
+            var fallback = Invoke(u1, u2);
+            r = fallback;
+            if (_ReturnCategory == 2)
+            {
+                return ref ConvertAddressToRef(fallback);
+            }
+            else
+            {
+                return ref r;
+            }
         }
         public PointerFunc<R, U1, U2> Clone()
         {

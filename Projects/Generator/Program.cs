@@ -205,9 +205,9 @@ namespace Generator
                     {
                         if (method.Name != "Invoke") continue;
 
-                        bool isGenericMethod = method.GenericParameters.Count > 0;
-
-                        if (isGenericMethod)
+                        // New-style Invoke returns 'ref R' (ReturnType is a byref);
+                        // old-style non-generic Invoke returns plain R.
+                        if (method.ReturnType.IsByReference)
                         {
                             InjectPointerFuncGenericInvoke(method, type, retcField, module, getRefParamFlagRef);
                         }
@@ -224,18 +224,21 @@ namespace Generator
                     {
                         if (method.Name != "Invoke") continue;
 
-                        bool isGenericMethod = method.GenericParameters.Count > 0;
-
-                        if (isGenericMethod)
+                        if (method.ReturnType.IsByReference)
                         {
-                            InjectFreeFuncGenericInvoke(method, type, retcField, module, getRefParamFlagRef);
+                            if (type.Name.StartsWith("FreeAction"))
+                            {
+                                InjectFreeActionGenericInvoke(method, type, module, getRefParamFlagRef);
+                            }
+                            else
+                            {
+                                InjectFreeFuncGenericInvoke(method, type, retcField, module, getRefParamFlagRef);
+                            }
                             RemoveNop(method);
                         }
                     }
                 }
             }
-
-            InjectFakeConvert(module);
 
             asm.Write(tar);
             asm.Dispose();
@@ -277,6 +280,7 @@ namespace Generator
         {
             if (typeName.StartsWith("PointerFunc")) return DelegateCategory.Pointer;
             if (typeName.StartsWith("FreeFunc")) return DelegateCategory.Func;
+            if (typeName.StartsWith("FreeAction")) return DelegateCategory.Func;   // same family, separate injector
             return DelegateCategory.Ignore;
         }
 
@@ -429,9 +433,138 @@ namespace Generator
             method.Body.ExceptionHandlers.Clear();
 
             var emitter = method.Body.GetILProcessor();
-            var funcTypeRef = GetFuncTypeFromCtor(type);
 
-            int paramCount = method.Parameters.Count;
+            // Parameters[0] is 'out R r'; user params start at index 1.
+            int paramCount = method.Parameters.Count - 1;
+            int userParamBase = 1;
+
+            var refcatenLocals = new VariableDefinition[paramCount];
+            for (int i = 0; i < paramCount; i++)
+            {
+                refcatenLocals[i] = new VariableDefinition(module.TypeSystem.Boolean);
+                method.Body.Variables.Add(refcatenLocals[i]);
+            }
+
+            var returnType = GetCallSiteReturnType(type);
+            VariableDefinition retValLocal = new VariableDefinition(returnType);
+            method.Body.Variables.Add(retValLocal);
+            // For the ByRef branch: the native fn returns an IntPtr (pointer value).
+            VariableDefinition retPtrLocal = new VariableDefinition(module.TypeSystem.IntPtr);
+            method.Body.Variables.Add(retPtrLocal);
+
+            for (int i = 0; i < paramCount; i++)
+            {
+                emitter.Emit(OpCodes.Ldarg_0);
+                emitter.Emit(OpCodes.Ldc_I4, i);
+                emitter.Emit(OpCodes.Call, getRefParamFlagRef);
+                emitter.Emit(OpCodes.Stloc, refcatenLocals[i]);
+            }
+
+            var callvoidfnLabel = emitter.Create(OpCodes.Nop);
+            var byValueRetLabel = emitter.Create(OpCodes.Nop);
+
+            for (int i = 0; i < paramCount; i++)
+            {
+                var ux = type.GenericParameters[i + 1];
+                var category0Label = emitter.Create(OpCodes.Nop);
+                var doneLabel = emitter.Create(OpCodes.Nop);
+
+                emitter.Emit(OpCodes.Ldloc, refcatenLocals[i]);
+                emitter.Emit(OpCodes.Brfalse, category0Label);
+
+                // ByRef: 'in P1 p1' is a P1& — ldarg loads the caller's variable address.
+                emitter.Emit(OpCodes.Ldarg, method.Parameters[userParamBase + i]);
+                emitter.Emit(OpCodes.Br, doneLabel);
+
+                emitter.Append(category0Label);
+                // ByValue: deref the in-param and push the U1 value.
+                emitter.Emit(OpCodes.Ldarg, method.Parameters[userParamBase + i]);
+                emitter.Emit(OpCodes.Ldobj, ux);
+
+                emitter.Append(doneLabel);
+            }
+
+            emitter.Emit(OpCodes.Ldarg_0);
+            emitter.Emit(OpCodes.Ldfld, pfnField);
+
+            // Stack: [params..., pfn] — consumed by calli in every branch below.
+            // _ReturnCategory: 0 = void fn, 1 = by-value ret, 2 = by-ref ret (pointer).
+            emitter.Emit(OpCodes.Ldarg_0);
+            emitter.Emit(OpCodes.Ldfld, retcField);
+            emitter.Emit(OpCodes.Brfalse, callvoidfnLabel);   // == 0 → void branch
+
+            emitter.Emit(OpCodes.Ldarg_0);
+            emitter.Emit(OpCodes.Ldfld, retcField);
+            emitter.Emit(OpCodes.Ldc_I4_1);
+            emitter.Emit(OpCodes.Beq, byValueRetLabel);       // == 1 → by-value branch
+
+            // ---- ByRef (category 2): the native fn returns an IntPtr (pointer value);
+            //      *r = (IntPtr)inner_func_return; return ref inner_func_return; ----
+            var callSiteByRef = new CallSite(module.TypeSystem.IntPtr);
+            callSiteByRef.CallingConvention = MethodCallingConvention.Default;
+            foreach (var p in GetCallSiteParams(type))
+            {
+                callSiteByRef.Parameters.Add(new ParameterDefinition(p));
+            }
+            emitter.Emit(OpCodes.Calli, callSiteByRef);       // [IntPtr]
+            emitter.Emit(OpCodes.Stloc, retPtrLocal);         // []
+            // *r = (IntPtr)inner_func_return — ldarg r (r is out R, i.e. a byref to
+            // the caller's slot) + stind.ref writes through it: *(caller's r) = ptr.
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
+            emitter.Emit(OpCodes.Ldloc, retPtrLocal);
+            emitter.Emit(OpCodes.Stind_Ref);                  // *r = ptr
+            // return ref inner_func_return — the IntPtr value itself as the byref.
+            emitter.Emit(OpCodes.Ldloc, retPtrLocal);
+            emitter.Emit(OpCodes.Ret);
+
+            // ---- ByValue (category 1): r = inner_func_return; return ref r; ----
+            emitter.Append(byValueRetLabel);
+            var callSite = new CallSite(returnType);
+            callSite.CallingConvention = MethodCallingConvention.Default;
+            foreach (var p in GetCallSiteParams(type))
+            {
+                callSite.Parameters.Add(new ParameterDefinition(p));
+            }
+            emitter.Emit(OpCodes.Calli, callSite);             // [R]
+            // r = ret: write through the byref param.
+            emitter.Emit(OpCodes.Stloc, retValLocal);
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
+            emitter.Emit(OpCodes.Ldloc, retValLocal);
+            emitter.Emit(OpCodes.Stobj, returnType);
+            // return ref r
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
+            emitter.Emit(OpCodes.Ret);
+
+            // ---- Void (category 0): r = default; return ref r; ----
+            emitter.Append(callvoidfnLabel);
+            var callSiteVoid = new CallSite(module.TypeSystem.Void);
+            callSiteVoid.CallingConvention = MethodCallingConvention.Default;
+            foreach (var p in GetCallSiteParams(type))
+            {
+                callSiteVoid.Parameters.Add(new ParameterDefinition(p));
+            }
+            emitter.Emit(OpCodes.Calli, callSiteVoid);
+            // r = default: initobj through the byref param.
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
+            emitter.Emit(OpCodes.Initobj, returnType);
+            // return ref r
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
+            emitter.Emit(OpCodes.Ret);
+        }
+
+        static void InjectFreeFuncGenericInvoke(MethodDefinition method, TypeDefinition type, FieldDefinition retField, ModuleDefinition module, MethodReference getRefParamFlagRef)
+        {
+            var delField = type.GetField("_Del");
+
+            method.Body.Instructions.Clear();
+            method.Body.Variables.Clear();
+            method.Body.ExceptionHandlers.Clear();
+
+            var emitter = method.Body.GetILProcessor();
+
+            // Parameters[0] is 'out R r'; user params start at index 1.
+            int paramCount = method.Parameters.Count - 1;
+            int userParamBase = 1;
 
             var refcatenLocals = new VariableDefinition[paramCount];
             for (int i = 0; i < paramCount; i++)
@@ -453,58 +586,88 @@ namespace Generator
             }
 
             var callvoidfnLabel = emitter.Create(OpCodes.Nop);
+            var byValueRetLabel = emitter.Create(OpCodes.Nop);
 
-            for (int i = 0; i < paramCount; i++)
+            // Load the delegate receiver + params (branching per-flag).
+            // NOTE: the callvirt targets Func<U1.., R> (the field's real type).
+            void EmitLoadDelegateAndParams()
             {
-                var ux = type.GenericParameters[i + 1];
-                var category0Label = emitter.Create(OpCodes.Nop);
-                var doneLabel = emitter.Create(OpCodes.Nop);
+                emitter.Emit(OpCodes.Ldarg_0);
+                emitter.Emit(OpCodes.Ldfld, delField);
+                for (int i = 0; i < paramCount; i++)
+                {
+                    var ux = type.GenericParameters[i + 1];
+                    var category0Label = emitter.Create(OpCodes.Nop);
+                    var doneLabel = emitter.Create(OpCodes.Nop);
 
-                emitter.Emit(OpCodes.Ldloc, refcatenLocals[i]);
-                emitter.Emit(OpCodes.Brfalse, category0Label);
+                    emitter.Emit(OpCodes.Ldloc, refcatenLocals[i]);
+                    emitter.Emit(OpCodes.Brfalse, category0Label);
 
-                emitter.Emit(OpCodes.Ldarga, method.Parameters[i]);
-                emitter.Emit(OpCodes.Ldind_Ref);
-                emitter.Emit(OpCodes.Br, doneLabel);
+                    // ByRef: 'in P1 p1' is a P1& — ldarg loads the caller's variable address.
+                    emitter.Emit(OpCodes.Ldarg, method.Parameters[userParamBase + i]);
+                    emitter.Emit(OpCodes.Br, doneLabel);
 
-                emitter.Append(category0Label);
-                emitter.Emit(OpCodes.Ldarg, method.Parameters[i]);
-                emitter.Emit(OpCodes.Ldobj, ux);
+                    emitter.Append(category0Label);
+                    // ByValue: deref the in-param and push the U1 value.
+                    emitter.Emit(OpCodes.Ldarg, method.Parameters[userParamBase + i]);
+                    emitter.Emit(OpCodes.Ldobj, ux);
 
-                emitter.Append(doneLabel);
+                    emitter.Append(doneLabel);
+                }
             }
 
+            // _ReturnCategory: 0 = void fn (FreeAction / VoidReturn), 1 = by-value ret, 2 = by-ref ret (pointer).
             emitter.Emit(OpCodes.Ldarg_0);
-            emitter.Emit(OpCodes.Ldfld, pfnField);
+            emitter.Emit(OpCodes.Ldfld, retField);
+            emitter.Emit(OpCodes.Brfalse, callvoidfnLabel);   // == 0 → void branch
 
             emitter.Emit(OpCodes.Ldarg_0);
-            emitter.Emit(OpCodes.Ldfld, retcField);
-            emitter.Emit(OpCodes.Brfalse, callvoidfnLabel);
+            emitter.Emit(OpCodes.Ldfld, retField);
+            emitter.Emit(OpCodes.Ldc_I4_1);
+            emitter.Emit(OpCodes.Beq, byValueRetLabel);       // == 1 → by-value branch
 
-            var callSite = new CallSite(returnType);
-            callSite.CallingConvention = MethodCallingConvention.Default;
-            foreach (var p in GetCallSiteParams(type))
-            {
-                callSite.Parameters.Add(new ParameterDefinition(p));
-            }
-            emitter.Emit(OpCodes.Calli, callSite);
+            // ---- ByRef (category 2): the delegate returns an IntPtr (pointer value);
+            //      *r = (IntPtr)inner_func_return; return ref inner_func_return; ----
+            EmitLoadDelegateAndParams();
+            emitter.Emit(OpCodes.Callvirt, CreateFuncInvokeRef(type, module));  // [R]
+            emitter.Emit(OpCodes.Stloc, retValLocal);         // []
+            // *r = (IntPtr)inner_func_return — ldarg r (r is out R, i.e. a byref to
+            // the caller's slot) + stind.ref writes through it: *(caller's r) = ptr.
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
+            emitter.Emit(OpCodes.Ldloc, retValLocal);
+            emitter.Emit(OpCodes.Stind_Ref);                  // *r = ptr
+            // return ref inner_func_return — the value itself as the byref.
+            emitter.Emit(OpCodes.Ldloc, retValLocal);
             emitter.Emit(OpCodes.Ret);
 
-            emitter.Append(callvoidfnLabel);
-            var callSiteVoid = new CallSite(module.TypeSystem.Void);
-            callSiteVoid.CallingConvention = MethodCallingConvention.Default;
-            foreach (var p in GetCallSiteParams(type))
-            {
-                callSiteVoid.Parameters.Add(new ParameterDefinition(p));
-            }
-            emitter.Emit(OpCodes.Calli, callSiteVoid);
-            emitter.Emit(OpCodes.Ldloca, retValLocal);
-            emitter.Emit(OpCodes.Initobj, returnType);
+            // ---- ByValue (category 1): r = delegate return value; return ref r; ----
+            emitter.Append(byValueRetLabel);
+            EmitLoadDelegateAndParams();
+            emitter.Emit(OpCodes.Callvirt, CreateFuncInvokeRef(type, module));
+            // r = ret: write through the byref param.
+            emitter.Emit(OpCodes.Stloc, retValLocal);
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
             emitter.Emit(OpCodes.Ldloc, retValLocal);
+            emitter.Emit(OpCodes.Stobj, returnType);
+            // return ref r
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
+            emitter.Emit(OpCodes.Ret);
+
+            // ---- Void (category 0): r = default; return ref r; ----
+            // FreeFunc + VoidReturn: _Del is Func<..., VoidReturn> — call it, discard the result.
+            emitter.Append(callvoidfnLabel);
+            EmitLoadDelegateAndParams();
+            emitter.Emit(OpCodes.Callvirt, CreateFuncInvokeRef(type, module));
+            emitter.Emit(OpCodes.Pop);   // discard the VoidReturn result
+            // r = default: initobj through the byref param.
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
+            emitter.Emit(OpCodes.Initobj, returnType);
+            // return ref r
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
             emitter.Emit(OpCodes.Ret);
         }
 
-        static void InjectFreeFuncGenericInvoke(MethodDefinition method, TypeDefinition type, FieldDefinition retField, ModuleDefinition module, MethodReference getRefParamFlagRef)
+        static void InjectFreeActionGenericInvoke(MethodDefinition method, TypeDefinition type, ModuleDefinition module, MethodReference getRefParamFlagRef)
         {
             var delField = type.GetField("_Del");
 
@@ -513,9 +676,10 @@ namespace Generator
             method.Body.ExceptionHandlers.Clear();
 
             var emitter = method.Body.GetILProcessor();
-            var funcTypeRef = GetFuncTypeFromCtor(type);
 
-            int paramCount = method.Parameters.Count;
+            // Parameters[0] is 'out R r'; user params start at index 1.
+            int paramCount = method.Parameters.Count - 1;
+            int userParamBase = 1;
 
             var refcatenLocals = new VariableDefinition[paramCount];
             for (int i = 0; i < paramCount; i++)
@@ -534,9 +698,9 @@ namespace Generator
                 emitter.Emit(OpCodes.Stloc, refcatenLocals[i]);
             }
 
+            // Load the Action receiver + params (branching per-flag).
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, delField);
-
             for (int i = 0; i < paramCount; i++)
             {
                 var ux = type.GenericParameters[i + 1];
@@ -546,99 +710,26 @@ namespace Generator
                 emitter.Emit(OpCodes.Ldloc, refcatenLocals[i]);
                 emitter.Emit(OpCodes.Brfalse, category0Label);
 
-                emitter.Emit(OpCodes.Ldarga, method.Parameters[i]);
-                emitter.Emit(OpCodes.Ldind_Ref);
+                // ByRef: 'in P1 p1' is a P1& — ldarg loads the caller's variable address.
+                emitter.Emit(OpCodes.Ldarg, method.Parameters[userParamBase + i]);
                 emitter.Emit(OpCodes.Br, doneLabel);
 
                 emitter.Append(category0Label);
-                emitter.Emit(OpCodes.Ldarg, method.Parameters[i]);
+                // ByValue: deref the in-param and push the U1 value.
+                emitter.Emit(OpCodes.Ldarg, method.Parameters[userParamBase + i]);
                 emitter.Emit(OpCodes.Ldobj, ux);
 
                 emitter.Append(doneLabel);
             }
 
-            emitter.Emit(OpCodes.Callvirt, CreateFuncInvokeRef(type, module));
+            // Invoke the Action, then: r = default; return ref r;
+            emitter.Emit(OpCodes.Callvirt, CreateActionInvokeRef(type, module));
+            // r = default: initobj through the byref param.
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
+            emitter.Emit(OpCodes.Initobj, returnType);
+            // return ref r
+            emitter.Emit(OpCodes.Ldarg, method.Parameters[0]);
             emitter.Emit(OpCodes.Ret);
-        }
-
-        static void InjectFakeConvert(ModuleDefinition module)
-        {
-            var type = module.GetType("Mod.LowLevel.FreeInvokable");
-            var torefmethods = type.GetMethods("ToRef");
-            foreach (var mtoref in torefmethods)
-            {
-                if (mtoref.Parameters.Count == 1 && mtoref.Parameters[0].ParameterType.Name == "ByRefParam")
-                {
-                    mtoref.Body.Variables.Clear();
-                    mtoref.Body.Instructions.Clear();
-                    {
-                        var vrv = new VariableDefinition(mtoref.ReturnType);
-                        mtoref.Body.Variables.Add(vrv);
-                        var emitter = mtoref.Body.GetILProcessor();
-                        emitter.Emit(OpCodes.Ldloca, 0);
-                        emitter.Emit(OpCodes.Ldarga, 0);
-                        emitter.Emit(OpCodes.Ldind_Ref);
-                        emitter.Emit(OpCodes.Stind_Ref);
-                        emitter.Emit(OpCodes.Ldloc_0);
-                        emitter.Emit(OpCodes.Ret);
-                    }
-                }
-                else if (mtoref.Parameters.Count == 1 && mtoref.Parameters[0].ParameterType.Name == "ByRefPtr")
-                {
-                    mtoref.Body.Variables.Clear();
-                    mtoref.Body.Instructions.Clear();
-                    {
-                        var vrv = new VariableDefinition(mtoref.ReturnType);
-                        var vrp = new VariableDefinition(module.TypeSystem.Object.MakeByReferenceType());
-                        mtoref.Body.Variables.Add(vrv);
-                        mtoref.Body.Variables.Add(vrp);
-                        var emitter = mtoref.Body.GetILProcessor();
-                        emitter.Emit(OpCodes.Ldarga, 0);
-                        emitter.Emit(OpCodes.Stloc_1);
-
-                        emitter.Emit(OpCodes.Ldloca, 0);
-                        emitter.Emit(OpCodes.Ldloc_1);
-                        emitter.Emit(OpCodes.Ldind_Ref);
-                        emitter.Emit(OpCodes.Stind_Ref);
-                        emitter.Emit(OpCodes.Ldloc_0);
-                        emitter.Emit(OpCodes.Ret);
-                    }
-                }
-            }
-            {
-                var mtofake = type.GetMethod("ToFakeRefObj");
-                var faketype = module.GetType("Mod.LowLevel.ByRefParam");
-                mtofake.Body.Instructions.Clear();
-                mtofake.Body.Variables.Clear();
-                {
-                    var vrv = new VariableDefinition(faketype);
-                    mtofake.Body.Variables.Add(vrv);
-                    var emitter = mtofake.Body.GetILProcessor();
-                    emitter.Emit(OpCodes.Ldloca, 0);
-                    emitter.Emit(OpCodes.Ldarga, 0);
-                    emitter.Emit(OpCodes.Ldind_Ref);
-                    emitter.Emit(OpCodes.Stind_Ref);
-                    emitter.Emit(OpCodes.Ldloc_0);
-                    emitter.Emit(OpCodes.Ret);
-                }
-            }
-            {
-                var mtofake = type.GetMethod("ToFakeRefPtr");
-                var faketype = module.GetType("Mod.LowLevel.ByRefPtr");
-                mtofake.Body.Instructions.Clear();
-                mtofake.Body.Variables.Clear();
-                {
-                    var vrv = new VariableDefinition(faketype);
-                    mtofake.Body.Variables.Add(vrv);
-                    var emitter = mtofake.Body.GetILProcessor();
-                    emitter.Emit(OpCodes.Ldloca, 0);
-                    emitter.Emit(OpCodes.Ldarga, 0);
-                    emitter.Emit(OpCodes.Ldind_Ref);
-                    emitter.Emit(OpCodes.Stind_Ref);
-                    emitter.Emit(OpCodes.Ldloc_0);
-                    emitter.Emit(OpCodes.Ret);
-                }
-            }
         }
     }
 }
