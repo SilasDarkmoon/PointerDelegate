@@ -192,6 +192,11 @@ namespace Generator
             var baseType = module.GetType("Mod.LowLevel.FreeInvokableBase");
             var retcField = baseType.GetField("_ReturnCategory");
 
+            // Bisect switch for ILC debugging: all | pf | prim | none.
+            var mode = Environment.GetEnvironmentVariable("PD_INJ_MODE") ?? "all";
+
+            if (mode == "all" || mode == "pf")
+            {
             foreach (var type in module.Types)
             {
                 if (type.Namespace != "Mod.LowLevel") continue;
@@ -215,9 +220,12 @@ namespace Generator
                     }
                 }
             }
+            }
 
             // ConvertAddressToRef<T>(IntPtr) -> ref T and ConvertRefToAddress<T>(in T) -> IntPtr
             // are identity passthroughs: ldarg.0; ret.
+            if (mode == "all" || mode == "prim")
+            {
             var convertAddressToRef = baseType.Methods.FirstOrDefault(m =>
                 m.Name == "ConvertAddressToRef" && m.Parameters.Count == 1
                 && m.Parameters[0].ParameterType.MetadataType == MetadataType.IntPtr
@@ -233,6 +241,7 @@ namespace Generator
             if (convertRefToAddress != null)
             {
                 InjectIdentityPassthrough(convertRefToAddress);
+            }
             }
 
             asm.Write(tar);
@@ -315,7 +324,17 @@ namespace Generator
             }
 
             emitter.Emit(OpCodes.Ldarg_0);
-            emitter.Emit(OpCodes.Ldfld, pfnField);
+            // ldfld must reference _Pfn through the OPEN generic instantiation
+            // PointerFunc<!0, !1..!n> (TypeSpec + MemberRef) — the shape Roslyn
+            // always emits for self-referencing fields in generic classes.
+            // A direct FieldDef reference combined with calli trips an ILC
+            // (NativeAOT) bug: "Failed to load type" → throw stub. CoreCLR's
+            // JIT accepts both shapes; ILC only tolerates the Roslyn shape.
+            var openSelf = new GenericInstanceType(type);
+            foreach (var gp in type.GenericParameters)
+                openSelf.GenericArguments.Add(gp);
+            var pfnRef = new FieldReference(pfnField.Name, pfnField.FieldType, openSelf);
+            emitter.Emit(OpCodes.Ldfld, pfnRef);
 
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, retcField);

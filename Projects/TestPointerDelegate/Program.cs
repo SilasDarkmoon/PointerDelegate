@@ -25,12 +25,12 @@ namespace TestPointerDelegate
             var fn1 = mi1.MethodHandle.GetFunctionPointer();
             // Pass1: PointerFunc, IntPtr return (default ByRef category 2), ByValue param
             {
-                var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
-                IntPtr r;
+                var invoker1 = new PointerFunc<ByRefParam, ByRefParam>(fn1);
+                ByRefParam r;
                 ref var ret = ref invoker1.Invoke(out r, in b);
                 // fn returns &b; ByRef branch: *r = &b (r holds the pointer); ret refs 'b'.
                 bool pass1;
-                unsafe { pass1 = r == (IntPtr)Unsafe.AsPointer(ref b); }
+                unsafe { pass1 = Unsafe.AsRef<IntPtr>(Unsafe.AsPointer(ref r)) == (IntPtr)Unsafe.AsPointer(ref b); }
                 Check("PointerFunc IntPtr ret: r == &b", pass1);
                 bool sameAsB;
                 unsafe { sameAsB = (IntPtr)Unsafe.AsPointer(ref ret) == (IntPtr)Unsafe.AsPointer(ref b); }
@@ -39,13 +39,13 @@ namespace TestPointerDelegate
             }
             // Pass2: PointerFunc, ByRef return + ByRef param
             {
-                var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn1);
+                var invoker1 = new PointerFunc<ByRefParam, ByRefParam>(fn1);
                 invoker1.SetParamFlag(0, ParamFlag.ByRef);
-                IntPtr r;
+                ByRefParam r;
                 ref var ret = ref invoker1.Invoke(out r, in a);
                 // ByRef param: native gets &a; fn returns &a; ByRef ret: *r = &a; ret refs 'a'.
                 bool pass2;
-                unsafe { pass2 = r == (IntPtr)Unsafe.AsPointer(ref a); }
+                unsafe { pass2 = Unsafe.AsRef<IntPtr>(Unsafe.AsPointer(ref r)) == (IntPtr)Unsafe.AsPointer(ref a); }
                 Check("PointerFunc ByRef ret: r == &a", pass2);
                 bool sameAsA;
                 unsafe { sameAsA = (IntPtr)Unsafe.AsPointer(ref ret) == (IntPtr)Unsafe.AsPointer(ref a); }
@@ -72,8 +72,8 @@ namespace TestPointerDelegate
                 int local = 41;
                 // U1=IntPtr → ByRef: native receives the address of the caller's variable.
                 // TestFunc5(IntPtr p) treats p as int* and increments *p, returning ref to it.
-                var invoker1 = new PointerFunc<IntPtr, IntPtr>(fn5);
-                IntPtr r;
+                var invoker1 = new PointerFunc<ByRefParam, ByRefParam>(fn5);
+                ByRefParam r;
                 ref var ret = ref invoker1.Invoke(out r, in local);
                 // native: ++(*p) → local becomes 42; returns the pointer to 'local'.
                 Check("PointerFunc ByRef ret: local == 42", local == 42);
@@ -91,7 +91,7 @@ namespace TestPointerDelegate
                 IntPtr localPtr;
                 unsafe { localPtr = (IntPtr)Unsafe.AsPointer(ref local); }
                 // U1=IntPtr → param 0 defaults to ByRef: native gets the variable address.
-                var invoker1 = new PointerFunc<VoidReturn, IntPtr>(fn6);
+                var invoker1 = new PointerFunc<VoidReturn, ByRefParam>(fn6);
                 VoidReturn r;
                 ref var ret = ref invoker1.Invoke(out r, in localPtr);
                 Check("PointerFunc void ret: r == default", r == null);
@@ -102,7 +102,7 @@ namespace TestPointerDelegate
             {
                 int local = 5;
                 Action<int> act = static (int x) => { Console.WriteLine($"    in FreeAction lambda, x = {x}"); };
-                var invoker1 = new FreeAction<int, int>(act);
+                var invoker1 = new FreeFunc<int, int>(act);
                 int r;
                 ref var ret = ref invoker1.Invoke(out r, in local);
                 Check("FreeAction: r == default", r == 0);
