@@ -212,7 +212,7 @@ namespace Generator
                         // New-style generic Invoke returns 'ref R' (ReturnType is a byref) —
                         // now a plain-C# trampoline calling the runtime-Emit DynamicInvoker;
                         // do NOT inject it. Only inject the old-style non-generic Invoke
-                        // (plain R return, calli to _Pfn).
+                        // (plain R return, calli to Pfn).
                         if (method.ReturnType.IsByReference) continue;
 
                         InjectPointerFuncNonGenericInvoke(method, type, retcField, module);
@@ -306,6 +306,7 @@ namespace Generator
         static void InjectPointerFuncNonGenericInvoke(MethodDefinition method, TypeDefinition type, FieldDefinition retcField, ModuleDefinition module)
         {
             var pfnField = type.GetField("_Pfn");
+            var unmanagedField = type.GetField("_IsUnmanaged");
 
             method.Body.Instructions.Clear();
             method.Body.Variables.Clear();
@@ -316,7 +317,9 @@ namespace Generator
             VariableDefinition retValLocal = new VariableDefinition(returnType);
             method.Body.Variables.Add(retValLocal);
 
+            var unmanagedLabel = emitter.Create(OpCodes.Nop);
             var callvoidfnLabel = emitter.Create(OpCodes.Nop);
+            var callvoidfnLabelU = emitter.Create(OpCodes.Nop);
 
             for (int i = 0; i < method.Parameters.Count; i++)
             {
@@ -324,7 +327,7 @@ namespace Generator
             }
 
             emitter.Emit(OpCodes.Ldarg_0);
-            // ldfld must reference _Pfn through the OPEN generic instantiation
+            // ldfld must reference Pfn through the OPEN generic instantiation
             // PointerFunc<!0, !1..!n> (TypeSpec + MemberRef) — the shape Roslyn
             // always emits for self-referencing fields in generic classes.
             // A direct FieldDef reference combined with calli trips an ILC
@@ -336,6 +339,15 @@ namespace Generator
             var pfnRef = new FieldReference(pfnField.Name, pfnField.FieldType, openSelf);
             emitter.Emit(OpCodes.Ldfld, pfnRef);
 
+            // Runtime branch on _IsUnmanaged: true → unmanaged calli (0x09, same as
+            // delegate* unmanaged), false → managed calli (0x00). brtrue pops the
+            // bool; the [params, pfn] stack below is shared by both paths.
+            var unmanagedRef = new FieldReference(unmanagedField.Name, unmanagedField.FieldType, openSelf);
+            emitter.Emit(OpCodes.Ldarg_0);
+            emitter.Emit(OpCodes.Ldfld, unmanagedRef);
+            emitter.Emit(OpCodes.Brtrue, unmanagedLabel);
+
+            // === managed path ===
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, retcField);
             emitter.Emit(OpCodes.Brfalse, callvoidfnLabel);
@@ -357,6 +369,36 @@ namespace Generator
                 callSiteVoid.Parameters.Add(new ParameterDefinition(p));
             }
             emitter.Emit(OpCodes.Calli, callSiteVoid);
+            emitter.Emit(OpCodes.Ldloca, retValLocal);
+            emitter.Emit(OpCodes.Initobj, returnType);
+            emitter.Emit(OpCodes.Ldloc, retValLocal);
+            emitter.Emit(OpCodes.Ret);
+
+            // === unmanaged path ===
+            emitter.Append(unmanagedLabel);
+            emitter.Emit(OpCodes.Ldarg_0);
+            emitter.Emit(OpCodes.Ldfld, retcField);
+            emitter.Emit(OpCodes.Brfalse, callvoidfnLabelU);
+
+            var callSiteU = new CallSite(returnType);
+            // Cecil 0.10's MethodCallingConvention lacks an Unmanaged member; 0x09 is
+            // IMAGE_CEE_CS_CALLCONV_UNMANAGED (verified against delegate* unmanaged output).
+            callSiteU.CallingConvention = (MethodCallingConvention)9;
+            foreach (var p in GetCallSiteParams(type))
+            {
+                callSiteU.Parameters.Add(new ParameterDefinition(p));
+            }
+            emitter.Emit(OpCodes.Calli, callSiteU);
+            emitter.Emit(OpCodes.Ret);
+
+            emitter.Append(callvoidfnLabelU);
+            var callSiteVoidU = new CallSite(module.TypeSystem.Void);
+            callSiteVoidU.CallingConvention = (MethodCallingConvention)9;
+            foreach (var p in GetCallSiteParams(type))
+            {
+                callSiteVoidU.Parameters.Add(new ParameterDefinition(p));
+            }
+            emitter.Emit(OpCodes.Calli, callSiteVoidU);
             emitter.Emit(OpCodes.Ldloca, retValLocal);
             emitter.Emit(OpCodes.Initobj, returnType);
             emitter.Emit(OpCodes.Ldloc, retValLocal);

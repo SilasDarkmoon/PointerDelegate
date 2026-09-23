@@ -24,14 +24,25 @@ namespace Mod.LowLevel
         private IntPtr _Address;
     }
     #region Creators
-    public struct FunctionPointer
+    public struct FunctionPointer : IFunctionPointerUnmanagedIndicator
     {
-        public IntPtr _Pfn;
-        public FunctionPointer(IntPtr pfn) { _Pfn = pfn; }
+        public IntPtr Pfn;
+        private bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
+        public FunctionPointer(IntPtr pfn)
+        {
+            Pfn = pfn;
+            _IsUnmanaged = false;
+        }
+        public FunctionPointer(IntPtr pfn, bool unmanaged)
+        {
+            Pfn = pfn;
+            _IsUnmanaged= unmanaged;
+        }
 
         public static implicit operator IntPtr(FunctionPointer thiz)
         {
-            return thiz._Pfn;
+            return thiz.Pfn;
         }
         public static explicit operator FunctionPointer(IntPtr pfn)
         {
@@ -41,23 +52,29 @@ namespace Mod.LowLevel
     public static partial class FreeInvokable
     {
         public static FunctionPointer AsFunctionPointer(this IntPtr pfn) { return new FunctionPointer(pfn); }
-        public static PointerFunc<R> CreateFreeInvokable<R>(this FunctionPointer pfn) { return new PointerFunc<R>(pfn); }
-        public static PointerFunc<R, U1> CreateFreeInvokable<R, U1>(this FunctionPointer pfn) { return new PointerFunc<R, U1>(pfn); }
-        public static PointerFunc<R, U1, U2> CreateFreeInvokable<R, U1, U2>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2>(pfn); }
-        public static PointerFunc<R, U1, U2, U3> CreateFreeInvokable<R, U1, U2, U3>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4> CreateFreeInvokable<R, U1, U2, U3, U4>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5> CreateFreeInvokable<R, U1, U2, U3, U4, U5>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>(pfn); }
-        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>(pfn); }
+        public static FunctionPointer AsFunctionPointer(this IntPtr pfn, bool unmanaged) { return new FunctionPointer(pfn, unmanaged); }
+        public static PointerFunc<R> CreateFreeInvokable<R>(this FunctionPointer pfn) { return new PointerFunc<R>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1> CreateFreeInvokable<R, U1>(this FunctionPointer pfn) { return new PointerFunc<R, U1>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2> CreateFreeInvokable<R, U1, U2>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3> CreateFreeInvokable<R, U1, U2, U3>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4> CreateFreeInvokable<R, U1, U2, U3, U4>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5> CreateFreeInvokable<R, U1, U2, U3, U4, U5>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>(pfn, pfn.IsUnmanaged); }
+        public static PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> CreateFreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>(this FunctionPointer pfn) { return new PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>(pfn, pfn.IsUnmanaged); }
+        public static T AsUnmanaged<T>(this T wrapper, bool unmanaged = true) where T : IFunctionPointerUnmanagedIndicator
+        {
+            wrapper.IsUnmanaged = unmanaged;
+            return wrapper;
+        }
         public static FreeFunc<R> CreateFreeInvokable<R>(this Func<R> func) { return new FreeFunc<R>(func); }
         public static FreeFunc<R, U1> CreateFreeInvokable<R, U1>(this Func<U1, R> func) { return new FreeFunc<R, U1>(func); }
         public static FreeFunc<R, U1, U2> CreateFreeInvokable<R, U1, U2>(this Func<U1, U2, R> func) { return new FreeFunc<R, U1, U2>(func); }
@@ -106,6 +123,30 @@ namespace Mod.LowLevel
             bool flag = (flags & (1u << paramIndex)) != 0;
             return flag;
         }
+
+        // P0-2 (2026-09-23): Mono binds delegates strictly — the DynamicInvoker
+        // signatures declare 'in Ux' (byref + modreq IsReadOnly) while DefineMethod
+        // produced bare byrefs. CoreCLR/.NET Framework ignore the modreq mismatch
+        // on bind, but Mono's CreateDelegate silently returns null (D0 probe,
+        // two runs). Re-sign the byref params with the required modifier so the
+        // emitted DynamicInvoke matches the delegate signature everywhere.
+        // The modreq type (System.Runtime.CompilerServices.IsReadOnly) is absent
+        // from the netstandard2.0 compile-time ref — reflect it (present on the
+        // net472/Mono runtimes, the only ones reaching the AssemblyBuilder path).
+        static Type s_isReadOnlyModreq;
+        internal static void ApplyInModifiers(System.Reflection.Emit.MethodBuilder mb,
+            Type returnType, Type[] paramTypes, int firstInParam)
+        {
+            if (s_isReadOnlyModreq == null)
+                s_isReadOnlyModreq = Type.GetType("System.Runtime.CompilerServices.IsReadOnly");
+            if (s_isReadOnlyModreq == null)
+                return;   // runtime without the modreq type — bare byrefs (pre-existing behavior)
+            var req = new Type[paramTypes.Length][];
+            for (int i = firstInParam; i < paramTypes.Length; i++)
+                req[i] = new[] { s_isReadOnlyModreq };
+            mb.SetSignature(returnType, null, null, paramTypes, req, null);
+        }
+
         protected bool GetRefParamFlag(int paramIndex)
         {
             return GetRefParamFlag(_RefParamFlags, paramIndex);
@@ -681,6 +722,10 @@ namespace Mod.LowLevel
         // ConvertParam<P, U>(P p) — the 1-arg generic overload on FreeInvokableBase
         // (bit-pattern reinterpretation: returns U whose bits are p's pointer value).
         static readonly System.Reflection.MethodInfo s_convertParam1;
+        // netstandard2.0's ILGenerator ref lacks the unmanaged EmitCalli overload
+        // (OpCode, Interop.CallingConvention, Type, Type[]) — present on both the
+        // net472 and CoreCLR runtimes; reflect it once.
+        static readonly System.Reflection.MethodInfo s_emitCalliUnmanaged;
 
         static PointerFuncEmit()
         {
@@ -696,12 +741,57 @@ namespace Mod.LowLevel
                     break;
                 }
             }
+            s_emitCalliUnmanaged = typeof(System.Reflection.Emit.ILGenerator).GetMethod(
+                "EmitCalli",
+                new[] { typeof(System.Reflection.Emit.OpCode),
+                        typeof(System.Runtime.InteropServices.CallingConvention),
+                        typeof(Type), typeof(Type[]) });
+        }
+
+        // netstandard2.0's AppDomain ref lacks DefineDynamicAssembly; reflect it (present
+        // on the .NET Framework / Mono runtimes, which are the only paths reaching the
+        // AssemblyBuilder fallback — DynamicMethod rejects ByRef returns there).
+        // Unity's Mono may not support RunAndCollect — degrade to Run.
+        static System.Reflection.MethodInfo s_defineDynamicAssembly;
+        static System.Reflection.Emit.AssemblyBuilder CreateCollectibleBuilder(string name)
+        {
+            if (s_defineDynamicAssembly == null)
+            {
+                s_defineDynamicAssembly = typeof(AppDomain).GetMethod("DefineDynamicAssembly",
+                    new[] { typeof(AssemblyName), typeof(System.Reflection.Emit.AssemblyBuilderAccess) });
+            }
+            try
+            {
+                return (System.Reflection.Emit.AssemblyBuilder)s_defineDynamicAssembly.Invoke(
+                    AppDomain.CurrentDomain,
+                    new object[] { new AssemblyName(name), System.Reflection.Emit.AssemblyBuilderAccess.RunAndCollect });
+            }
+            catch (Exception)
+            {
+                // Mono (Unity Editor) may reject RunAndCollect — plain Run keeps the
+                // assembly alive for the process lifetime (acceptable: emit caches are
+                // static and bounded by instantiation count anyway).
+                return (System.Reflection.Emit.AssemblyBuilder)s_defineDynamicAssembly.Invoke(
+                    AppDomain.CurrentDomain,
+                    new object[] { new AssemblyName(name), System.Reflection.Emit.AssemblyBuilderAccess.Run });
+            }
+        }
+
+        // netstandard2.0's TypeBuilder ref lacks CreateType — same reflective treatment.
+        static System.Reflection.MethodInfo s_createType;
+        static Type CreateBuilderType(System.Reflection.Emit.TypeBuilder type)
+        {
+            if (s_createType == null)
+                s_createType = typeof(System.Reflection.Emit.TypeBuilder).GetMethod("CreateType");
+            return (Type)s_createType.Invoke(type, null);
         }
 
         // Emits DynamicInvoke: ref R (IntPtr pfn, out R r, in U1 u1, ..., in Un un).
         // All flag decisions are made HERE at emit time — the emitted IL is a single
         // straight-line calli plus return-value massaging, no branches.
-        public static DynamicMethod EmitDynamicInvoker(Type returnType, Type[] Ux, int returnFlag, uint paramFlags)
+        // Returns MethodInfo (DynamicMethod on CoreCLR; an AssemblyBuilder static
+        // method on .NET Framework / Mono, where DynamicMethod rejects ByRef returns).
+        public static System.Reflection.MethodInfo EmitDynamicInvoker(bool unmanaged, Type returnType, Type[] Ux, int returnFlag, uint paramFlags)
         {
             // arg 0 = pfn, arg 1 = r (R&), arg 2+i = ux (Ux&).
             var paramTypes = new Type[2 + Ux.Length];
@@ -710,9 +800,36 @@ namespace Mod.LowLevel
             for (int i = 0; i < Ux.Length; i++)
                 paramTypes[2 + i] = Ux[i].MakeByRefType();
 
-            var dm = new DynamicMethod("DynamicInvoke", returnType.MakeByRefType(), paramTypes,
-                typeof(FreeInvokableBase), true);
-            var il = dm.GetILGenerator();
+            try
+            {
+                var dm = new DynamicMethod("DynamicInvoke", returnType.MakeByRefType(), paramTypes,
+                    typeof(FreeInvokableBase), true);
+                EmitBody(dm.GetILGenerator(), unmanaged, returnType, Ux, returnFlag, paramFlags);
+                return dm;
+            }
+            catch (Exception)
+            {
+                // .NET Framework throws NotSupportedException here; Unity Mono throws
+                // ArgumentException ("Return type can't be a byref type", C0d probe) —
+                // catch both (any failure) and fall back to a collectible
+                // AssemblyBuilder method (MethodBuilder allows ByRef returns). The
+                // emitted type derives from FreeInvokableBase so the protected static
+                // conversion primitives (ConvertParam etc.) stay callable.
+                var ab = CreateCollectibleBuilder("PointerFuncEmit_" + Guid.NewGuid().ToString("N"));
+                var mod = ab.DefineDynamicModule("PointerFuncEmitMod");
+                var type = mod.DefineType("PointerFuncEmitType",
+                    System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed,
+                    typeof(FreeInvokableBase));
+                var mb = type.DefineMethod("DynamicInvoke",
+                    System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
+                    returnType.MakeByRefType(), paramTypes);
+                EmitBody(mb.GetILGenerator(), unmanaged, returnType, Ux, returnFlag, paramFlags);
+                return CreateBuilderType(type).GetMethod("DynamicInvoke");
+            }
+        }
+
+        static void EmitBody(System.Reflection.Emit.ILGenerator il, bool unmanaged, Type returnType, Type[] Ux, int returnFlag, uint paramFlags)
+        {
 
             // Push params: ByRef → ldarg (pass the Ux& itself); ByValue → ldarg + ldobj Ux.
             // The callsite matches exactly what was pushed.
@@ -734,11 +851,25 @@ namespace Mod.LowLevel
             // Push the function pointer, then calli.
             il.Emit(OpCodes.Ldarg, 0);
 
+            // NOTE: Reflection.Emit cannot express CALLCONV_UNMANAGED (0x09) — the
+            // (CallingConventions)9 trick gets silently masked down to Standard
+            // (managed, 0x00) inside SignatureHelper. The Interop.CallingConvention
+            // overload is the real unmanaged path: Cdecl emits 0x01 (unmanaged C),
+            // which on Windows matches delegate* unmanaged default (x64: Microsoft
+            // x64 ABI; x86: Cdecl) instruction-for-instruction.
+            void EmitCalli(Type ret, Type[] ps)
+            {
+                if (unmanaged)
+                    s_emitCalliUnmanaged.Invoke(il, new object[] { OpCodes.Calli,
+                        System.Runtime.InteropServices.CallingConvention.Cdecl, ret, ps });
+                else
+                    il.EmitCalli(OpCodes.Calli, CallingConventions.Standard, ret, ps, null);
+            }
+
             if (returnFlag == 0)
             {
                 // void: calli void(...); r = default; return ref r;
-                il.EmitCalli(OpCodes.Calli, System.Reflection.CallingConventions.Standard,
-                    typeof(void), callSiteParams, null);
+                EmitCalli(typeof(void), callSiteParams);
                 il.Emit(OpCodes.Ldarg, 1);
                 il.Emit(OpCodes.Initobj, returnType);
                 il.Emit(OpCodes.Ldarg, 1);
@@ -747,8 +878,7 @@ namespace Mod.LowLevel
             else if (returnFlag == 1)
             {
                 // by-value: calli R(...); r = calli_return; return ref r;
-                il.EmitCalli(OpCodes.Calli, System.Reflection.CallingConventions.Standard,
-                    returnType, callSiteParams, null);
+                EmitCalli(returnType, callSiteParams);
                 var tmp = il.DeclareLocal(returnType);
                 il.Emit(OpCodes.Stloc, tmp);
                 il.Emit(OpCodes.Ldarg, 1);
@@ -762,8 +892,7 @@ namespace Mod.LowLevel
                 // by-ref: calli ref R(...);
                 //          r = ConvertParam<IntPtr, R>((IntPtr)(void*)calli_return);
                 //          return ref calli_return;
-                il.EmitCalli(OpCodes.Calli, System.Reflection.CallingConventions.Standard,
-                    returnType.MakeByRefType(), callSiteParams, null);
+                EmitCalli(returnType.MakeByRefType(), callSiteParams);
                 var tmp = il.DeclareLocal(returnType);
                 // Stack: [R&]. dup → [R&, R&]; conv.u → [R&, native int];
                 // call ConvertParam<IntPtr, R>(ptr) → [R&, R].
@@ -777,16 +906,25 @@ namespace Mod.LowLevel
                 // Stack: [R&] — return ref calli_return.
                 il.Emit(OpCodes.Ret);
             }
-
-            return dm;
         }
     }
-    public class PointerFunc<R> : FreeInvokable<R>
+    public interface IFunctionPointerUnmanagedIndicator
+    {
+        bool IsUnmanaged { get; set; }
+    }
+    public class PointerFunc<R> : FreeInvokable<R>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke()
         {
@@ -799,13 +937,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -840,12 +985,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R>;
         }
     }
-    public class PointerFunc<R, U1> : FreeInvokable<R, U1>
+    public class PointerFunc<R, U1> : FreeInvokable<R, U1>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1)
         {
@@ -858,13 +1010,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -904,12 +1063,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1>;
         }
     }
-    public class PointerFunc<R, U1, U2> : FreeInvokable<R, U1, U2>
+    public class PointerFunc<R, U1, U2> : FreeInvokable<R, U1, U2>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2)
         {
@@ -922,13 +1088,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -971,12 +1144,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3> : FreeInvokable<R, U1, U2, U3>
+    public class PointerFunc<R, U1, U2, U3> : FreeInvokable<R, U1, U2, U3>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3)
         {
@@ -989,13 +1169,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1041,12 +1228,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4> : FreeInvokable<R, U1, U2, U3, U4>
+    public class PointerFunc<R, U1, U2, U3, U4> : FreeInvokable<R, U1, U2, U3, U4>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
         {
@@ -1059,13 +1253,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1114,12 +1315,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5> : FreeInvokable<R, U1, U2, U3, U4, U5>
+    public class PointerFunc<R, U1, U2, U3, U4, U5> : FreeInvokable<R, U1, U2, U3, U4, U5>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
         {
@@ -1132,13 +1340,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1190,12 +1405,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6> : FreeInvokable<R, U1, U2, U3, U4, U5, U6>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6> : FreeInvokable<R, U1, U2, U3, U4, U5, U6>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
         {
@@ -1208,13 +1430,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1269,12 +1498,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
         {
@@ -1287,13 +1523,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1351,12 +1594,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
         {
@@ -1369,13 +1619,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1436,12 +1693,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
         {
@@ -1454,13 +1718,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1524,12 +1795,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
         {
@@ -1542,13 +1820,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1615,12 +1900,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
         {
@@ -1633,13 +1925,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1709,12 +2008,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
         {
@@ -1727,13 +2033,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1806,12 +2119,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
         {
@@ -1824,13 +2144,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1906,12 +2233,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
         {
@@ -1924,13 +2258,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2009,12 +2350,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
         {
@@ -2027,13 +2375,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2115,12 +2470,19 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>
+    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>, IFunctionPointerUnmanagedIndicator
     {
         protected IntPtr _Pfn;
+        protected bool _IsUnmanaged;
+        public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
             _Pfn = fn;
+        }
+        public PointerFunc(IntPtr fn, bool unmanaged)
+        {
+            _Pfn = fn;
+            IsUnmanaged = unmanaged;
         }
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
         {
@@ -2133,13 +2495,20 @@ namespace Mod.LowLevel
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
                 try
                 {
-                    var dm = PointerFuncEmit.EmitDynamicInvoker(typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15), typeof(U16) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15), typeof(U16) }, _ReturnCategory, _RefParamFlags);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2283,12 +2652,13 @@ namespace Mod.LowLevel
                 EmitBody(dm.GetILGenerator(), delType, returnType, Ux, returnFlag, paramFlags, invoke, is_action);
                 return dm;
             }
-            catch (NotSupportedException)
+            catch (Exception)
             {
-                // .NET Framework: DynamicMethod.Init rejects ByRef return types.
-                // Fall back to a collectible AssemblyBuilder method (MethodBuilder allows
-                // ByRef returns). The emitted type derives from FreeInvokableBase so the
-                // protected static conversion primitives (ConvertParam etc.) stay callable.
+                // .NET Framework throws NotSupportedException; Unity Mono throws
+                // ArgumentException (C0d probe) — catch both (any failure) and fall
+                // back to a collectible AssemblyBuilder method (MethodBuilder allows
+                // ByRef returns). The emitted type derives from FreeInvokableBase so
+                // the protected static conversion primitives stay callable.
                 var ab = CreateCollectibleBuilder("FreeFuncEmit_" + Guid.NewGuid().ToString("N"));
                 var mod = ab.DefineDynamicModule("FreeFuncEmitMod");
                 var type = mod.DefineType("FreeFuncEmitType",
@@ -2297,13 +2667,15 @@ namespace Mod.LowLevel
                 var mb = type.DefineMethod("DynamicInvoke",
                     System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
                     returnType.MakeByRefType(), paramTypes);
+                FreeInvokableBase.ApplyInModifiers(mb, returnType.MakeByRefType(), paramTypes, 2);
                 EmitBody(mb.GetILGenerator(), delType, returnType, Ux, returnFlag, paramFlags, invoke, is_action);
                 return CreateBuilderType(type).GetMethod("DynamicInvoke");
             }
         }
 
         // netstandard2.0's AppDomain ref lacks DefineDynamicAssembly; reflect it (present
-        // on the .NET Framework runtime, which is the only path reaching this fallback).
+        // on the .NET Framework / Mono runtimes, which are the only paths reaching this
+        // fallback). Unity's Mono may not support RunAndCollect — degrade to Run.
         static System.Reflection.MethodInfo s_defineDynamicAssembly;
         static System.Reflection.Emit.AssemblyBuilder CreateCollectibleBuilder(string name)
         {
@@ -2312,9 +2684,18 @@ namespace Mod.LowLevel
                 s_defineDynamicAssembly = typeof(AppDomain).GetMethod("DefineDynamicAssembly",
                     new[] { typeof(AssemblyName), typeof(System.Reflection.Emit.AssemblyBuilderAccess) });
             }
-            return (System.Reflection.Emit.AssemblyBuilder)s_defineDynamicAssembly.Invoke(
-                AppDomain.CurrentDomain,
-                new object[] { new AssemblyName(name), System.Reflection.Emit.AssemblyBuilderAccess.RunAndCollect });
+            try
+            {
+                return (System.Reflection.Emit.AssemblyBuilder)s_defineDynamicAssembly.Invoke(
+                    AppDomain.CurrentDomain,
+                    new object[] { new AssemblyName(name), System.Reflection.Emit.AssemblyBuilderAccess.RunAndCollect });
+            }
+            catch (Exception)
+            {
+                return (System.Reflection.Emit.AssemblyBuilder)s_defineDynamicAssembly.Invoke(
+                    AppDomain.CurrentDomain,
+                    new object[] { new AssemblyName(name), System.Reflection.Emit.AssemblyBuilderAccess.Run });
+            }
         }
 
         // netstandard2.0's TypeBuilder ref lacks CreateType — same reflective treatment.
@@ -2432,7 +2813,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action), typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2505,7 +2891,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1>), typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2583,7 +2974,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2>), typeof(R), new[] { typeof(U1), typeof(U2) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2664,7 +3060,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2748,7 +3149,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2835,7 +3241,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2925,7 +3336,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3018,7 +3434,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3114,7 +3535,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3213,7 +3639,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3315,7 +3746,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3420,7 +3856,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3528,7 +3969,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3639,7 +4085,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3753,7 +4204,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3870,7 +4326,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3990,7 +4451,12 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15), typeof(U16) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)Delegate.CreateDelegate(typeof(DynamicInvoker), dm);
+                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
+                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
+                    if (del == null)
+                        throw new InvalidOperationException(
+                            "CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
