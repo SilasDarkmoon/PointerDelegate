@@ -207,13 +207,10 @@ namespace Generator
                 {
                     foreach (var method in type.Methods)
                     {
-                        if (method.Name != "Invoke") continue;
-
-                        // New-style generic Invoke returns 'ref R' (ReturnType is a byref) —
-                        // now a plain-C# trampoline calling the runtime-Emit DynamicInvoker;
-                        // do NOT inject it. Only inject the old-style non-generic Invoke
-                        // (plain R return, calli to Pfn).
-                        if (method.ReturnType.IsByReference) continue;
+                        // The non-generic Invoke is now a plain-C# trampoline (runtime-Emit
+                        // PlainInvoker first, InvokePlain fallback). InvokePlain — plain R
+                        // return, calli to Pfn — is the only woven method left in PointerFunc.
+                        if (method.Name != "InvokePlain") continue;
 
                         InjectPointerFuncNonGenericInvoke(method, type, retcField, module);
                         RemoveNop(method);

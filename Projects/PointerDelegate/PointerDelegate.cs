@@ -889,6 +889,79 @@ namespace Mod.LowLevel
                 il.Emit(OpCodes.Ret);
             }
         }
+
+        // Emits DynamicPlainInvoke: R (IntPtr pfn, U1 u1, ..., Un un) — the runtime-Emit
+        // twin of the woven InvokePlain (non-generic Invoke). Params enter BY VALUE
+        // (the non-generic Invoke signature), so paramFlags is irrelevant here and the
+        // callsite params are Ux as-is — mirroring the woven shape exactly:
+        //   returnFlag == 0 → calli void(...); return default(R);
+        //   otherwise      → calli R(...); return the result.
+        // The return type is never a byref, so the DynamicMethod fast path works on
+        // every runtime; the AssemblyBuilder fallback is only a safety net.
+        public static System.Reflection.MethodInfo EmitDynamicPlainInvoker(bool unmanaged, Type returnType, Type[] Ux, int returnFlag, uint paramFlags)
+        {
+            // arg 0 = pfn, arg 1+i = ux (Ux by value).
+            var paramTypes = new Type[1 + Ux.Length];
+            paramTypes[0] = typeof(IntPtr);
+            for (int i = 0; i < Ux.Length; i++)
+                paramTypes[1 + i] = Ux[i];
+
+            try
+            {
+                var dm = new DynamicMethod("DynamicPlainInvoke", returnType, paramTypes,
+                    typeof(FreeInvokableBase), true);
+                EmitPlainBody(dm.GetILGenerator(), unmanaged, returnType, Ux, returnFlag);
+                return dm;
+            }
+            catch (Exception)
+            {
+                var ab = CreateCollectibleBuilder("PointerFuncEmit_" + Guid.NewGuid().ToString("N"));
+                var mod = ab.DefineDynamicModule("PointerFuncEmitMod");
+                var type = mod.DefineType("PointerFuncEmitType",
+                    System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed,
+                    typeof(FreeInvokableBase));
+                var mb = type.DefineMethod("DynamicPlainInvoke",
+                    System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
+                    returnType, paramTypes);
+                EmitPlainBody(mb.GetILGenerator(), unmanaged, returnType, Ux, returnFlag);
+                return CreateBuilderType(type).GetMethod("DynamicPlainInvoke");
+            }
+        }
+
+        static void EmitPlainBody(System.Reflection.Emit.ILGenerator il, bool unmanaged, Type returnType, Type[] Ux, int returnFlag)
+        {
+            // Push params by value, then the function pointer — [U1..Un, pfn].
+            for (int i = 0; i < Ux.Length; i++)
+                il.Emit(OpCodes.Ldarg, 1 + i);
+            il.Emit(OpCodes.Ldarg, 0);
+
+            void EmitCalli(Type ret, Type[] ps)
+            {
+                if (unmanaged)
+                    s_emitCalliUnmanaged.Invoke(il, new object[] { OpCodes.Calli,
+                        System.Runtime.InteropServices.CallingConvention.Cdecl, ret, ps });
+                else
+                    il.EmitCalli(OpCodes.Calli, CallingConventions.Standard, ret, ps, null);
+            }
+
+            if (returnFlag == 0)
+            {
+                // void: calli void(...); return default(R);
+                EmitCalli(typeof(void), Ux);
+                var tmp = il.DeclareLocal(returnType);
+                il.Emit(OpCodes.Ldloca, tmp);
+                il.Emit(OpCodes.Initobj, returnType);
+                il.Emit(OpCodes.Ldloc, tmp);
+                il.Emit(OpCodes.Ret);
+            }
+            else
+            {
+                // by-value / by-ref: calli R(...) — same callsite the woven InvokePlain
+                // uses; return the calli result directly.
+                EmitCalli(returnType, Ux);
+                il.Emit(OpCodes.Ret);
+            }
+        }
     }
     public interface IFunctionPointerUnmanagedIndicator
     {
@@ -1010,7 +1083,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1);
+            }
+            else
+            {
+                return del(_Pfn, p1);
+            }
+        }
+        private R InvokePlain(U1 p1)
         {
             throw new NotImplementedException();
         }
@@ -1084,7 +1190,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2)
         {
             throw new NotImplementedException();
         }
@@ -1161,7 +1300,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3)
         {
             throw new NotImplementedException();
         }
@@ -1241,7 +1413,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4)
         {
             throw new NotImplementedException();
         }
@@ -1324,7 +1529,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
         {
             throw new NotImplementedException();
         }
@@ -1410,7 +1648,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
         {
             throw new NotImplementedException();
         }
@@ -1499,7 +1770,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6, p7);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6, p7);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
         {
             throw new NotImplementedException();
         }
@@ -1591,7 +1895,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6, p7, p8);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6, p7, p8);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
         {
             throw new NotImplementedException();
         }
@@ -1686,7 +2023,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6, p7, p8, p9);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
         {
             throw new NotImplementedException();
         }
@@ -1784,7 +2154,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
         {
             throw new NotImplementedException();
         }
@@ -1885,7 +2288,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
         {
             throw new NotImplementedException();
         }
@@ -1989,7 +2425,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
         {
             throw new NotImplementedException();
         }
@@ -2096,7 +2565,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
         {
             throw new NotImplementedException();
         }
@@ -2206,7 +2708,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
         {
             throw new NotImplementedException();
         }
@@ -2319,7 +2854,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
         {
             throw new NotImplementedException();
         }
@@ -2435,7 +3003,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15), typeof(U16) }, _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16);
+            }
+            else
+            {
+                return del(_Pfn, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16);
+            }
+        }
+        private R InvokePlain(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
         {
             throw new NotImplementedException();
         }
