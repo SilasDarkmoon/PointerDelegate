@@ -123,30 +123,6 @@ namespace Mod.LowLevel
             bool flag = (flags & (1u << paramIndex)) != 0;
             return flag;
         }
-
-        // P0-2 (2026-09-23): Mono binds delegates strictly — the DynamicInvoker
-        // signatures declare 'in Ux' (byref + modreq IsReadOnly) while DefineMethod
-        // produced bare byrefs. CoreCLR/.NET Framework ignore the modreq mismatch
-        // on bind, but Mono's CreateDelegate silently returns null (D0 probe,
-        // two runs). Re-sign the byref params with the required modifier so the
-        // emitted DynamicInvoke matches the delegate signature everywhere.
-        // The modreq type (System.Runtime.CompilerServices.IsReadOnly) is absent
-        // from the netstandard2.0 compile-time ref — reflect it (present on the
-        // net472/Mono runtimes, the only ones reaching the AssemblyBuilder path).
-        static Type s_isReadOnlyModreq;
-        internal static void ApplyInModifiers(System.Reflection.Emit.MethodBuilder mb,
-            Type returnType, Type[] paramTypes, int firstInParam)
-        {
-            if (s_isReadOnlyModreq == null)
-                s_isReadOnlyModreq = Type.GetType("System.Runtime.CompilerServices.IsReadOnly");
-            if (s_isReadOnlyModreq == null)
-                return;   // runtime without the modreq type — bare byrefs (pre-existing behavior)
-            var req = new Type[paramTypes.Length][];
-            for (int i = firstInParam; i < paramTypes.Length; i++)
-                req[i] = new[] { s_isReadOnlyModreq };
-            mb.SetSignature(returnType, null, null, paramTypes, req, null);
-        }
-
         protected bool GetRefParamFlag(int paramIndex)
         {
             return GetRefParamFlag(_RefParamFlags, paramIndex);
@@ -279,6 +255,12 @@ namespace Mod.LowLevel
             }
         }
         protected static bool _IsDynamicCodeDisabled = false;
+        protected internal static T CreateDelegate<T>(MethodInfo dm) where T : Delegate
+        {
+            return (T)(dm is System.Reflection.Emit.DynamicMethod dynDm
+                ? dynDm.CreateDelegate(typeof(T))
+                : Delegate.CreateDelegate(typeof(T), dm));
+        }
         //protected struct ParamInfo : IEquatable<ParamInfo>
         //{
         //    public Type ParamType;
@@ -926,7 +908,40 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
+        protected delegate R PlainInvoker(IntPtr pfn);
+        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
         public override R Invoke()
+        {
+            var emitkey = (ulong)_ReturnCategory;
+            emitkey <<= 32;
+            emitkey |= _RefParamFlags;
+            if (_IsUnmanaged)
+                emitkey |= 1UL << 34;
+            PlainInvoker del = null;
+            if (!_IsDynamicCodeDisabled && !_DynamicPlainInvokerCache.TryGetValue(emitkey, out del))
+            {
+                try
+                {
+                    var dm = PointerFuncEmit.EmitDynamicPlainInvoker(_IsUnmanaged, typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
+                    del = CreateDelegate<PlainInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = _DynamicPlainInvokerCache.GetOrAdd(emitkey, del);
+                }
+                catch (Exception)
+                {
+                    _IsDynamicCodeDisabled = true;
+                }
+            }
+            if (del == null)
+            {
+                return InvokePlain();
+            }
+            else
+            {
+                return del(_Pfn);
+            }
+        }
+        private R InvokePlain()
         {
             throw new NotImplementedException();
         }
@@ -945,12 +960,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1018,12 +1029,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1096,12 +1103,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1177,12 +1180,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1261,12 +1260,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1348,12 +1343,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1438,12 +1429,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1531,12 +1518,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1627,12 +1610,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1726,12 +1705,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1828,12 +1803,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -1933,12 +1904,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2041,12 +2008,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2152,12 +2115,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2266,12 +2225,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2383,12 +2338,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2503,12 +2454,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = PointerFuncEmit.EmitDynamicInvoker(_IsUnmanaged, typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15), typeof(U16) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2667,7 +2614,6 @@ namespace Mod.LowLevel
                 var mb = type.DefineMethod("DynamicInvoke",
                     System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
                     returnType.MakeByRefType(), paramTypes);
-                FreeInvokableBase.ApplyInModifiers(mb, returnType.MakeByRefType(), paramTypes, 2);
                 EmitBody(mb.GetILGenerator(), delType, returnType, Ux, returnFlag, paramFlags, invoke, is_action);
                 return CreateBuilderType(type).GetMethod("DynamicInvoke");
             }
@@ -2813,12 +2759,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action), typeof(R), Array.Empty<Type>(), _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2891,12 +2833,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1>), typeof(R), new[] { typeof(U1) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -2974,12 +2912,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2>), typeof(R), new[] { typeof(U1), typeof(U2) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3060,12 +2994,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3149,12 +3079,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3241,12 +3167,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3336,12 +3258,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3434,12 +3352,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3535,12 +3449,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3639,12 +3549,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3746,12 +3652,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3856,12 +3758,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -3969,12 +3867,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -4085,12 +3979,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -4204,12 +4094,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -4326,12 +4212,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
@@ -4451,12 +4333,8 @@ namespace Mod.LowLevel
                 try
                 {
                     var dm = FreeFuncEmit.EmitDynamicInvoker(_Del.GetType() ?? typeof(Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>), typeof(R), new[] { typeof(U1), typeof(U2), typeof(U3), typeof(U4), typeof(U5), typeof(U6), typeof(U7), typeof(U8), typeof(U9), typeof(U10), typeof(U11), typeof(U12), typeof(U13), typeof(U14), typeof(U15), typeof(U16) }, _ReturnCategory, _RefParamFlags);
-                    del = (DynamicInvoker)(dm is System.Reflection.Emit.DynamicMethod dynDm
-                    ? dynDm.CreateDelegate(typeof(DynamicInvoker))
-                    : Delegate.CreateDelegate(typeof(DynamicInvoker), dm));
-                    if (del == null)
-                        throw new InvalidOperationException(
-                            "CreateDelegate returned null (signature mismatch on this runtime)");
+                    del = CreateDelegate<DynamicInvoker>(dm);
+                    if (del == null) throw new InvalidOperationException("CreateDelegate returned null (signature mismatch on this runtime)");
                     del = _EmitCache.GetOrAdd(emitkey, del);
                 }
                 catch (Exception)
