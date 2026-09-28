@@ -192,10 +192,15 @@ namespace Generator
             var baseType = module.GetType("Mod.LowLevel.FreeInvokableBase");
             var retcField = baseType.GetField("_ReturnCategory");
 
-            // Bisect switch for ILC debugging: all | pf | prim | none.
+            // Bisect switch for ILC debugging: all | pf | prim | none | unmonly.
             var mode = Environment.GetEnvironmentVariable("PD_INJ_MODE") ?? "all";
+            // unmonly (2026-09-28 experiment): InvokePlain woven with ONLY the unmanaged
+            // calli (no _IsUnmanaged branch, no managed calli sites). Tests whether the
+            // mixed-convention branching is what makes IL2CPP translate the unmanaged
+            // calli as a RuntimeMethod* dereference in shared-generic bodies.
+            var unmonly = mode == "unmonly";
 
-            if (mode == "all" || mode == "pf")
+            if (mode == "all" || mode == "pf" || unmonly)
             {
             foreach (var type in module.Types)
             {
@@ -212,7 +217,7 @@ namespace Generator
                         // return, calli to Pfn — is the only woven method left in PointerFunc.
                         if (method.Name != "InvokePlain") continue;
 
-                        InjectPointerFuncNonGenericInvoke(method, type, retcField, module);
+                        InjectPointerFuncNonGenericInvoke(method, type, retcField, module, unmonly);
                         RemoveNop(method);
                     }
                 }
@@ -300,7 +305,7 @@ namespace Generator
             return result;
         }
 
-        static void InjectPointerFuncNonGenericInvoke(MethodDefinition method, TypeDefinition type, FieldDefinition retcField, ModuleDefinition module)
+        static void InjectPointerFuncNonGenericInvoke(MethodDefinition method, TypeDefinition type, FieldDefinition retcField, ModuleDefinition module, bool unmanagedOnly)
         {
             var pfnField = type.GetField("_Pfn");
             var unmanagedField = type.GetField("_IsUnmanaged");
@@ -340,6 +345,8 @@ namespace Generator
             // delegate* unmanaged), false → managed calli (0x00). brtrue pops the
             // bool; the [params, pfn] stack below is shared by both paths.
             var unmanagedRef = new FieldReference(unmanagedField.Name, unmanagedField.FieldType, openSelf);
+            if (!unmanagedOnly)
+            {
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, unmanagedRef);
             emitter.Emit(OpCodes.Brtrue, unmanagedLabel);
@@ -370,17 +377,23 @@ namespace Generator
             emitter.Emit(OpCodes.Initobj, returnType);
             emitter.Emit(OpCodes.Ldloc, retValLocal);
             emitter.Emit(OpCodes.Ret);
-
-            // === unmanaged path ===
             emitter.Append(unmanagedLabel);
+            }
+
+            // === unmanaged path (the only path in unmonly mode) ===
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ldfld, retcField);
             emitter.Emit(OpCodes.Brfalse, callvoidfnLabelU);
 
             var callSiteU = new CallSite(returnType);
-            // Cecil 0.10's MethodCallingConvention lacks an Unmanaged member; 0x09 is
-            // IMAGE_CEE_CS_CALLCONV_UNMANAGED (verified against delegate* unmanaged output).
-            callSiteU.CallingConvention = (MethodCallingConvention)9;
+            // 2026-09-28 fix: use IMAGE_CEE_CS_CALLCONV_C (0x01) — the value Roslyn
+            // actually emits for delegate* unmanaged[Cdecl] (verified by Cecil-dumping
+            // MCallUnmanagedNoArg in TestAssembly: CallingConvention = 1 (C), no modopt).
+            // The previous 0x09 (IMAGE_CEE_CS_CALLCONV_UNMANAGED) made IL2CPP translate
+            // the calli as a managed indirect call (RuntimeMethod* dereference) in EVERY
+            // body — shared or concrete (unmonly + Faster-runtime experiments proved the
+            // translation ignores sharing/branching; only the conv byte matters).
+            callSiteU.CallingConvention = MethodCallingConvention.C;
             foreach (var p in GetCallSiteParams(type))
             {
                 callSiteU.Parameters.Add(new ParameterDefinition(p));
@@ -390,7 +403,7 @@ namespace Generator
 
             emitter.Append(callvoidfnLabelU);
             var callSiteVoidU = new CallSite(module.TypeSystem.Void);
-            callSiteVoidU.CallingConvention = (MethodCallingConvention)9;
+            callSiteVoidU.CallingConvention = MethodCallingConvention.C;
             foreach (var p in GetCallSiteParams(type))
             {
                 callSiteVoidU.Parameters.Add(new ParameterDefinition(p));
