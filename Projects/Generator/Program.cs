@@ -246,10 +246,179 @@ namespace Generator
             }
             }
 
+            EmitRefSafetyRulesAttribute(asm);
+            EmitScopedRefOnInParameters(asm);
+
             asm.Write(tar);
             asm.Dispose();
 
             Console.WriteLine("Injection completed: " + tar);
+        }
+
+        /// <summary>
+        /// Adds [ScopedRef] to every `in` parameter of the generic ref-returning Invoke
+        /// methods (ref R Invoke&lt;P1..&gt;(out R r, in P1 p1, ...)). The scoped promise
+        /// removes those parameters from the consumer's escape-min entirely, so ANY
+        /// argument shape (constants included) can be passed while returning the result
+        /// by ref: `return ref pf.Invoke(out r, 41)` compiles. Without it the in
+        /// parameter participates in the min and demands a ref-returnable argument.
+        /// The metadata shape mirrors what C# 11 emits for `scoped in`: the parameter
+        /// carries [In, ScopedRef, IsReadOnly] - In/IsReadOnly are already present on
+        /// plain `in`, so only ScopedRef is added here. Idempotent per parameter.
+        /// NOTE: Cecil's IsByReference returns false for `P1& modreq(InAttribute)`
+        /// (the exact shape C# emits for `in`), so parameters are matched by the
+        /// '&' suffix in their type name instead.
+        /// </summary>
+        static void EmitScopedRefOnInParameters(AssemblyDefinition asm)
+        {
+            const string ns = "System.Runtime.CompilerServices";
+            var module = asm.MainModule;
+
+            // ScopedRefAttribute shim (ns2.0 lacks it)
+            var shim = module.GetType($"{ns}.ScopedRefAttribute");
+            if (shim == null)
+            {
+                shim = new TypeDefinition(ns, "ScopedRefAttribute",
+                    TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
+                    module.ImportReference(typeof(System.Attribute)));
+
+                // [AttributeUsage(Parameter | Field, AllowMultiple = false, Inherited = false)]
+                var usageCtor = module.ImportReference(
+                    typeof(AttributeUsageAttribute).GetConstructor(new[] { typeof(AttributeTargets) }));
+                var usage = new CustomAttribute(usageCtor);
+                usage.ConstructorArguments.Add(new CustomAttributeArgument(
+                    module.ImportReference(typeof(AttributeTargets)),
+                    (int)(AttributeTargets.Parameter | AttributeTargets.Field)));
+                usage.Fields.Add(new CustomAttributeNamedArgument("AllowMultiple",
+                    new CustomAttributeArgument(module.TypeSystem.Boolean, false)));
+                usage.Fields.Add(new CustomAttributeNamedArgument("Inherited",
+                    new CustomAttributeArgument(module.TypeSystem.Boolean, false)));
+                shim.CustomAttributes.Add(usage);
+
+                var ctor = new MethodDefinition(".ctor",
+                    MethodAttributes.Public | MethodAttributes.HideBySig |
+                    MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                    module.TypeSystem.Void);
+                var baseCtor = module.ImportReference(typeof(System.Attribute).GetConstructor(
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+                    binder: null, Type.EmptyTypes, modifiers: null));
+                var il = ctor.Body.GetILProcessor();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Call, baseCtor);
+                il.Emit(OpCodes.Ret);
+                shim.Methods.Add(ctor);
+                module.Types.Add(shim);
+            }
+            var shimCtor = shim.GetMethod(".ctor");
+
+            // annotate every `in` parameter of every ref-returning method
+            // (the generic Invoke family AND helpers like ConvertRef<F, T>(in F f))
+            int annotated = 0;
+            foreach (var type in module.Types)
+            {
+                if (type.Namespace != "Mod.LowLevel") continue;
+                foreach (var method in type.Methods)
+                {
+                    if (!method.ReturnType.IsByReference) continue;      // ref-returning methods
+                    foreach (var p in method.Parameters)
+                    {
+                        // Cecil quirk: IsByReference is false for `P1& modreq(InAttribute)`
+                        bool isByRefLike = p.ParameterType.Name.Contains("&");
+                        if (isByRefLike && !p.IsOut)
+                        {
+                            if (!p.CustomAttributes.Any(a => a.AttributeType.FullName == $"{ns}.ScopedRefAttribute"))
+                            {
+                                p.CustomAttributes.Add(new CustomAttribute(shimCtor));
+                                annotated++;
+                            }
+                        }
+                    }
+                }
+            }
+            Console.WriteLine($"[ScopedRef] annotated {annotated} in-parameters");
+        }
+
+        /// <summary>
+        /// Injects [module: RefSafetyRules(version)] so that C# 11+ consumers apply the
+        /// updated ref-safety escape rules to this module's APIs (out-parameter passthrough
+        /// bridges like PointerFunc's generic Invoke become usable in `return ref`). The
+        /// attribute type is compiler-reserved (CS8335) and cannot be attached from source,
+        /// so it has to be emitted here at the metadata level. Idempotent: skips if already
+        /// present.
+        /// </summary>
+        static void EmitRefSafetyRulesAttribute(AssemblyDefinition asm, int version = 11)
+        {
+            const string attrNamespace = "System.Runtime.CompilerServices";
+            const string attrFullName = attrNamespace + ".RefSafetyRulesAttribute";
+            var module = asm.MainModule;
+
+            // already attached to the module? nothing to do
+            foreach (var ca in module.CustomAttributes)
+            {
+                if (ca.AttributeType.FullName == attrFullName)
+                {
+                    return;
+                }
+            }
+
+            // find or create the shim attribute type (old assemblies don't contain it)
+            var attrType = module.GetType(attrFullName);
+            if (attrType == null)
+            {
+                attrType = new TypeDefinition(
+                    attrNamespace,
+                    "RefSafetyRulesAttribute",
+                    TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
+                    module.ImportReference(typeof(System.Attribute)));
+
+                // [AttributeUsage(Assembly | Module, AllowMultiple = false, Inherited = false)]
+                var usageCtor = module.ImportReference(
+                    typeof(AttributeUsageAttribute).GetConstructor(new[] { typeof(AttributeTargets) }));
+                var usage = new CustomAttribute(usageCtor);
+                usage.ConstructorArguments.Add(new CustomAttributeArgument(
+                    module.ImportReference(typeof(AttributeTargets)),
+                    (int)(AttributeTargets.Assembly | AttributeTargets.Module)));
+                usage.Fields.Add(new CustomAttributeNamedArgument("AllowMultiple",
+                    new CustomAttributeArgument(module.TypeSystem.Boolean, false)));
+                usage.Fields.Add(new CustomAttributeNamedArgument("Inherited",
+                    new CustomAttributeArgument(module.TypeSystem.Boolean, false)));
+                attrType.CustomAttributes.Add(usage);
+
+                // public readonly int Version;
+                var versionField = new FieldDefinition("Version",
+                    FieldAttributes.Public | FieldAttributes.InitOnly,
+                    module.TypeSystem.Int32);
+
+                // public RefSafetyRulesAttribute(int version) { Version = version; }
+                var ctor = new MethodDefinition(".ctor",
+                    MethodAttributes.Public | MethodAttributes.HideBySig |
+                    MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                    module.TypeSystem.Void);
+                ctor.Parameters.Add(new ParameterDefinition("version", ParameterAttributes.None, module.TypeSystem.Int32));
+
+                // System.Attribute's own constructor is protected - reflect with NonPublic
+                var baseCtor = module.ImportReference(typeof(System.Attribute).GetConstructor(
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+                    binder: null, Type.EmptyTypes, modifiers: null));
+
+                var emitter = ctor.Body.GetILProcessor();
+                emitter.Emit(OpCodes.Ldarg_0);
+                emitter.Emit(OpCodes.Call, baseCtor);
+                emitter.Emit(OpCodes.Ldarg_0);
+                emitter.Emit(OpCodes.Ldarg_1);
+                emitter.Emit(OpCodes.Stfld, versionField);
+                emitter.Emit(OpCodes.Ret);
+
+                attrType.Fields.Add(versionField);
+                attrType.Methods.Add(ctor);
+                module.Types.Add(attrType);
+            }
+
+            // [module: RefSafetyRules(version)]
+            var attrCtor = attrType.GetMethod(".ctor");
+            var attribute = new CustomAttribute(attrCtor);
+            attribute.ConstructorArguments.Add(new CustomAttributeArgument(module.TypeSystem.Int32, version));
+            module.CustomAttributes.Add(attribute);
         }
 
         static void RemoveNop(MethodDefinition method)
