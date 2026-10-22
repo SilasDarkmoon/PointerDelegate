@@ -192,7 +192,7 @@ namespace Generator
             var baseType = module.GetType("Mod.LowLevel.FreeInvokableBase");
             var retcField = baseType.GetField("_ReturnCategory");
 
-            // Bisect switch for ILC debugging: all | pf | prim | none | unmonly.
+            // Bisect switch for ILC debugging: all | pf | prim | lref | none | unmonly.
             var mode = Environment.GetEnvironmentVariable("PD_INJ_MODE") ?? "all";
             // unmonly (2026-09-28 experiment): InvokePlain woven with ONLY the unmanaged
             // calli (no _IsUnmanaged branch, no managed calli sites). Tests whether the
@@ -244,6 +244,19 @@ namespace Generator
             {
                 InjectIdentityPassthrough(convertRefToAddress);
             }
+            }
+
+            // InvokeFallback ByRefLocalSlot fixup: before the non-generic Invoke(u1..un) call,
+            // each ux local gets FixupByRefLocalSlot<!Ux>(ref ux, ldarga pX) — when Ux is
+            // ByRefLocalSlot, ux.Ref2Ref.Address is overwritten with the address of
+            // InvokeFallback's own `in Ux pX` parameter slot (a GC-tracked byref the
+            // collector keeps updated), so the ByRefLocalSlot the callee receives keeps
+            // tracking heap compaction on the fallback path. NOTE: the fixup helper
+            // calls ConvertRefToAddress/ConvertAddressToRef, so the prim section above
+            // must run too (it does under "all").
+            if (mode == "all" || mode == "lref")
+            {
+                InjectInvokeFallbackByRefLocalSlotFixup(asm);
             }
 
             EmitRefSafetyRulesAttribute(asm);
@@ -596,6 +609,115 @@ namespace Generator
             var emitter = method.Body.GetILProcessor();
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ret);
+        }
+
+        /// <summary>
+        /// Injects the ByRefLocalSlot fixup into every InvokeFallback(out R r, in U1 p1, ..., in Un pn)
+        /// of PointerFunc`n / FreeFunc`n: right before the non-generic Invoke(u1..un) call, each
+        /// ux local gets
+        ///   ldloca ux; ldarga pX; conv.u; call FixupByRefLocalSlot&lt;!Ux&gt;(ref !Ux, native int)
+        /// (X = the Ux argument slot: this=0, r=1, p1=2, ...). At runtime the helper checks
+        /// typeof(Ux) == typeof(ByRefLocalSlot) and, if so, overwrites ux.Ref2Ref.Address with the
+        /// address of InvokeFallback's own `in Ux pX` parameter slot — a GC-tracked byref the
+        /// collector keeps updated across compacting GCs — so the ByRefLocalSlot the callee receives
+        /// keeps tracking heap movement. Pattern-matched on the Roslyn-emitted shape:
+        ///   [ldarg.0][ldloc u1]...[ldloc un][callvirt Invoke(U1..Un)]
+        /// </summary>
+        static void InjectInvokeFallbackByRefLocalSlotFixup(AssemblyDefinition asm)
+        {
+            var module = asm.MainModule;
+            var baseType = module.GetType("Mod.LowLevel.FreeInvokableBase");
+            var fixup = baseType.Methods.FirstOrDefault(m => m.Name == "FixupByRefLocalSlot");
+            if (fixup == null)
+            {
+                Console.WriteLine("InvokeFallback fixup: FixupByRefLocalSlot not found — skipped");
+                return;
+            }
+            int patched = 0, skipped = 0;
+            foreach (var type in module.Types)
+            {
+                if (type.Namespace != "Mod.LowLevel") continue;
+                if (!type.Name.StartsWith("PointerFunc") && !type.Name.StartsWith("FreeFunc")) continue;
+                foreach (var method in type.Methods)
+                {
+                    if (method.Name != "InvokeFallback") continue;
+                    if (!method.HasBody || method.Parameters.Count < 2) continue;
+                    if (InjectFixupsIntoInvokeFallback(method, type, fixup)) patched++;
+                    else skipped++;
+                }
+            }
+            Console.WriteLine($"InvokeFallback fixup: {patched} methods patched, {skipped} skipped");
+        }
+
+        static bool InjectFixupsIntoInvokeFallback(MethodDefinition method, TypeDefinition type, MethodDefinition fixup)
+        {
+            var body = method.Body;
+            int n = method.Parameters.Count - 1;    // Ux param count (param 0 = `out R r`)
+
+            // locate the non-generic Invoke(u1..un) call
+            Instruction invokeCall = null;
+            foreach (var inst in body.Instructions)
+            {
+                if (inst.OpCode != OpCodes.Call && inst.OpCode != OpCodes.Callvirt) continue;
+                if (!(inst.Operand is MethodReference mref)) continue;
+                if (mref.Name != "Invoke" || mref.HasGenericParameters) continue;
+                if (mref.Parameters.Count != n) continue;
+                invokeCall = inst;
+                break;
+            }
+            if (invokeCall == null) return false;
+
+            // walk back over the [ldloc un]...[ldloc u1] argument pushes
+            var locals = new VariableDefinition[n];
+            var cursor = invokeCall.Previous;
+            for (int i = n - 1; i >= 0; i--)
+            {
+                if (cursor == null || !TryGetLdlocLocal(cursor, body, out locals[i])) return false;
+                cursor = cursor.Previous;
+            }
+            // cursor must now be the receiver push (ldarg.0 / ldarg.s 0)
+            if (cursor == null || !IsLdarg0(cursor)) return false;
+
+            // insert the fixups before the receiver push
+            var il = body.GetILProcessor();
+            for (int i = 0; i < n; i++)
+            {
+                var gim = new GenericInstanceMethod(fixup);
+                gim.GenericArguments.Add(type.GenericParameters[1 + i]);    // U(i+1)
+                il.InsertBefore(cursor, il.Create(OpCodes.Ldloca, locals[i]));
+                il.InsertBefore(cursor, il.Create(OpCodes.Ldarga, method.Parameters[1 + i]));
+                il.InsertBefore(cursor, il.Create(OpCodes.Conv_U));
+                il.InsertBefore(cursor, il.Create(OpCodes.Call, gim));
+            }
+            return true;
+        }
+
+        static bool TryGetLdlocLocal(Instruction inst, MethodBody body, out VariableDefinition local)
+        {
+            local = null;
+            var op = inst.OpCode;
+            if (op == OpCodes.Ldloc || op == OpCodes.Ldloc_S)
+            {
+                local = inst.Operand as VariableDefinition;
+                return local != null;
+            }
+            int idx = -1;
+            if (op == OpCodes.Ldloc_0) idx = 0;
+            else if (op == OpCodes.Ldloc_1) idx = 1;
+            else if (op == OpCodes.Ldloc_2) idx = 2;
+            else if (op == OpCodes.Ldloc_3) idx = 3;
+            if (idx >= 0 && idx < body.Variables.Count)
+            {
+                local = body.Variables[idx];
+                return true;
+            }
+            return false;
+        }
+
+        static bool IsLdarg0(Instruction inst)
+        {
+            return inst.OpCode == OpCodes.Ldarg_0
+                || (inst.OpCode == OpCodes.Ldarg_S && (inst.Operand as ParameterDefinition)?.Index == 0);
         }
     }
 }

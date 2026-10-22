@@ -22,6 +22,52 @@ namespace Mod.LowLevel
     public struct ByRefParam
     {
         private IntPtr _Address;
+        /// <summary>
+        /// The raw address carried in this ByRefParam. Only meaningful as ByRefLocalSlot's
+        /// Ref2Ref slot (where it holds the address of a byref slot); plain ByRefParam
+        /// markers used as Ux parameter types never read or write it. The setter is
+        /// internal: writing the slot address is reserved to the library (ByRefLocalSlot
+        /// construction and the InvokeFallback fixup) — external code builds slots
+        /// via new ByRefLocalSlot(IntPtr).
+        /// </summary>
+        public IntPtr Address
+        {
+            get { return _Address; }
+            internal set { _Address = value; }
+        }
+    }
+    /// <summary>
+    /// An indirect ref over a BYREF SLOT on the caller's evaluation stack: Ref2Ref.Address
+    /// holds the slot's address, and reading Address dereferences the slot, yielding the
+    /// CURRENT (GC-updated) address of the referenced value — a ByRefLocalSlot handed to a callee
+    /// keeps tracking heap compaction without pinning, as long as the wrapping frame lives.
+    /// Use ByRefLocalSlot as a Ux parameter type of PointerFunc/FreeFunc and the invoker wraps
+    /// the argument slot automatically: the hot-emit path builds slot with
+    /// slot.Ref2Ref.Address = ldarga.x (x = that Ux argument's slot), and the Generator
+    /// injects the equivalent FixupByRefLocalSlot call into InvokeFallback. The callee
+    /// receives the ByRefLocalSlot BY VALUE and reads the current address through
+    /// *(IntPtr*)slot.Ref2Ref.Address (or the Address property).
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ByRefLocalSlot
+    {
+        public ByRefParam Ref2Ref;
+        /// <summary>
+        /// The CURRENT address of the referenced value — dereferences the byref slot,
+        /// which the GC keeps updated across compacting collections. The setter
+        /// (re-pointing the slot) is internal, reserved to the library.
+        /// </summary>
+        public IntPtr Address
+        {
+            get { unsafe { return *(IntPtr*)Ref2Ref.Address; } }
+            internal set { unsafe { *(IntPtr*)Ref2Ref.Address = value; } }
+        }
+        /// <summary>Wraps a byref-slot address (e.g. the ldarga of an `in` parameter slot).</summary>
+        public ByRefLocalSlot(IntPtr slotAddress)
+        {
+            Ref2Ref = default(ByRefParam);
+            Ref2Ref.Address = slotAddress;
+        }
     }
     #region Creators
     public struct FunctionPointer : IFunctionPointerUnmanagedIndicator
@@ -141,7 +187,7 @@ namespace Mod.LowLevel
         }
         protected bool JudgeParamRefFlag(Type ut)
         {
-            if (ut == typeof(ByRefParam))
+            if (ut == typeof(ByRefParam) || ut == typeof(ByRefLocalSlot))
             {
                 return true;
             }
@@ -252,6 +298,24 @@ namespace Mod.LowLevel
                 {
                     return ref result;
                 }
+            }
+        }
+        /// <summary>
+        /// InvokeFallback ByRefLocalSlot fixup (invoked from Generator-injected IL only): when T
+        /// is ByRefLocalSlot, overwrites u's Ref2Ref.Address with slotAddr — the address of
+        /// InvokeFallback's own `in T pX` parameter slot (a GC-tracked byref the collector
+        /// keeps updated), so the ByRefLocalSlot the callee receives keeps tracking heap
+        /// compaction: *(IntPtr*)slot.Ref2Ref.Address always yields the current address of
+        /// the caller's argument. The injected call is
+        ///   ldloca u; ldarga pX; conv.u; call FixupByRefLocalSlot&lt;!Ux&gt;(ref !Ux, native int)
+        /// placed right before the non-generic Invoke(u1..un) call.
+        /// </summary>
+        protected static void FixupByRefLocalSlot<T>(ref T u, IntPtr slotAddr)
+        {
+            if (typeof(T) == typeof(ByRefLocalSlot))
+            {
+                ref ByRefLocalSlot slot = ref ConvertAddressToRef<ByRefLocalSlot>(ConvertRefToAddress(in u));
+                slot.Ref2Ref.Address = slotAddr;
             }
         }
         protected static bool _IsDynamicCodeDisabled = false;
@@ -708,6 +772,9 @@ namespace Mod.LowLevel
         // (OpCode, Interop.CallingConvention, Type, Type[]) — present on both the
         // net472 and CoreCLR runtimes; reflect it once.
         static readonly System.Reflection.MethodInfo s_emitCalliUnmanaged;
+        // ByRefLocalSlot::.ctor(IntPtr slotAddress) — wraps a byref-slot address (ByRefLocalSlot params).
+        static readonly System.Reflection.ConstructorInfo s_byRefLocalSlotCtor =
+            typeof(ByRefLocalSlot).GetConstructor(new[] { typeof(IntPtr) });
 
         static PointerFuncEmit()
         {
@@ -815,16 +882,33 @@ namespace Mod.LowLevel
 
             // Push params: ByRef → ldarg (pass the Ux& itself); ByValue → ldarg + ldobj Ux.
             // The callsite matches exactly what was pushed.
+            // ByRefLocalSlot params (checked FIRST, flag-independent): create a fresh ByRefLocalSlot
+            // wrapping THIS method's `in Ux` argument slot — slot.Ref2Ref.Address =
+            // ldarga(2+i) — and pass slot BY VALUE. The slot is a GC-tracked byref the
+            // collector keeps updated (ldarga makes it address-taken → reported for the
+            // whole method), so the callee reading *(IntPtr*)slot.Ref2Ref.Address always
+            // sees the current address of the caller's argument, across compacting GCs.
             var callSiteParams = new Type[Ux.Length];
             for (int i = 0; i < Ux.Length; i++)
             {
-                il.Emit(OpCodes.Ldarg, 2 + i);
-                if (FreeInvokableBase.GetRefParamFlag(paramFlags, i))
+                if (Ux[i] == typeof(ByRefLocalSlot))
                 {
+                    // newobj leaves the 8-byte struct directly on the eval stack as the
+                    // calli argument — no stloc/ldloc round-trip (and no boxing: valuetype
+                    // newobj is a stack temp, not a box).
+                    il.Emit(OpCodes.Ldarga, 2 + i);
+                    il.Emit(OpCodes.Conv_U);
+                    il.Emit(OpCodes.Newobj, s_byRefLocalSlotCtor);
+                    callSiteParams[i] = typeof(ByRefLocalSlot);
+                }
+                else if (FreeInvokableBase.GetRefParamFlag(paramFlags, i))
+                {
+                    il.Emit(OpCodes.Ldarg, 2 + i);
                     callSiteParams[i] = Ux[i].MakeByRefType();
                 }
                 else
                 {
+                    il.Emit(OpCodes.Ldarg, 2 + i);
                     il.Emit(OpCodes.Ldobj, Ux[i]);
                     callSiteParams[i] = Ux[i];
                 }
@@ -3150,6 +3234,9 @@ namespace Mod.LowLevel
         // ConvertAddressToRef<T>(IntPtr address) — the IntPtr-arg generic overload on
         // FreeInvokableBase (returns ref T pointing at address).
         static readonly System.Reflection.MethodInfo s_convertAddressToRef;
+        // ByRefLocalSlot::.ctor(IntPtr slotAddress) — wraps a byref-slot address (ByRefLocalSlot params).
+        static readonly System.Reflection.ConstructorInfo s_byRefLocalSlotCtor =
+            typeof(ByRefLocalSlot).GetConstructor(new[] { typeof(IntPtr) });
 
         static FreeFuncEmit()
         {
@@ -3262,19 +3349,32 @@ namespace Mod.LowLevel
             il.Emit(OpCodes.Castclass, delType);
 
             // Push params — the callsite is delType.Invoke(U1, ..., Un), always by value:
+            // ByRefLocalSlot (checked FIRST, flag-independent) → a fresh ByRefLocalSlot wrapping this
+            //   method's `in Ux` argument slot (slot.Ref2Ref.Address = ldarga(2+i)), passed
+            //   by value — the delegate/callee reads the GC-updated current address
+            //   through it: *(IntPtr*)slot.Ref2Ref.Address;
             // ByRef → the delegate receives the ADDRESS of the slot
             //         (conv.u + ConvertParam<IntPtr, Ux> bit-reinterpretation);
             // ByValue → ldobj Ux (the slot's contents).
             for (int i = 0; i < Ux.Length; i++)
             {
-                il.Emit(OpCodes.Ldarg, 2 + i);
-                if (FreeInvokableBase.GetRefParamFlag(paramFlags, i))
+                if (Ux[i] == typeof(ByRefLocalSlot))
                 {
+                    // newobj leaves the 8-byte struct directly on the eval stack as the
+                    // delegate-Invoke argument — no stloc/ldloc round-trip (and no boxing).
+                    il.Emit(OpCodes.Ldarga, 2 + i);
+                    il.Emit(OpCodes.Conv_U);
+                    il.Emit(OpCodes.Newobj, s_byRefLocalSlotCtor);
+                }
+                else if (FreeInvokableBase.GetRefParamFlag(paramFlags, i))
+                {
+                    il.Emit(OpCodes.Ldarg, 2 + i);
                     il.Emit(OpCodes.Conv_U);
                     il.Emit(OpCodes.Call, s_convertParam1.MakeGenericMethod(typeof(IntPtr), Ux[i]));
                 }
                 else
                 {
+                    il.Emit(OpCodes.Ldarg, 2 + i);
                     il.Emit(OpCodes.Ldobj, Ux[i]);
                 }
             }
