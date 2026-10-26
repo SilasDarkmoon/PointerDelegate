@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Mod.LowLevel
@@ -255,13 +256,27 @@ namespace Mod.LowLevel
         }
 
         #region DynamicGenerator
+        [MethodImpl(MethodImplOptions.NoInlining)]
         protected static ref T ConvertAddressToRef<T>(IntPtr address)
         {
-            throw new NotImplementedException();
+            unsafe
+            {
+#pragma warning disable CS8500
+                return ref *(T*)address;
+#pragma warning restore CS8500
+            }
         }
         protected static IntPtr ConvertRefToAddress<T>(in T r)
         {
-            throw new NotImplementedException();
+            unsafe
+            {
+#pragma warning disable CS8500
+                fixed (T* pr = &r)
+                {
+                    return (IntPtr)(void*)pr;
+                }
+#pragma warning restore CS8500
+            }
         }
         protected static U ConvertParam<P, U>(P p)
         {
@@ -290,15 +305,15 @@ namespace Mod.LowLevel
         }
         protected static ref T ConvertRef<F, T>(in F f)
         {
-            for (; ; )
+#pragma warning disable CS8500
+            unsafe
             {
-                IntPtr address = ConvertRefToAddress(in f);
-                ref T result = ref ConvertAddressToRef<T>(address);
-                if (address == ConvertRefToAddress(in f))
+                fixed (F* pf = &f)
                 {
-                    return ref result;
+                    return ref *(T*)(void*)pf;
                 }
             }
+#pragma warning restore CS8500
         }
         /// <summary>
         /// InvokeFallback ByRefLocalSlot fixup (invoked from Generator-injected IL only): when T
@@ -314,7 +329,7 @@ namespace Mod.LowLevel
         {
             if (typeof(T) == typeof(ByRefLocalSlot))
             {
-                ref ByRefLocalSlot slot = ref ConvertAddressToRef<ByRefLocalSlot>(ConvertRefToAddress(in u));
+                ref ByRefLocalSlot slot = ref ConvertRef<T, ByRefLocalSlot>(in u);
                 slot.Ref2Ref.Address = slotAddr;
             }
         }

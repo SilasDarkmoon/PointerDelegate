@@ -224,27 +224,27 @@ namespace Generator
             }
             }
 
-            // ConvertAddressToRef<T>(IntPtr) -> ref T and ConvertRefToAddress<T>(in T) -> IntPtr
-            // are identity passthroughs: ldarg.0; ret.
-            if (mode == "all" || mode == "prim")
-            {
-            var convertAddressToRef = baseType.Methods.FirstOrDefault(m =>
-                m.Name == "ConvertAddressToRef" && m.Parameters.Count == 1
-                && m.Parameters[0].ParameterType.MetadataType == MetadataType.IntPtr
-                && m.ReturnType.IsByReference);
-            if (convertAddressToRef != null)
-            {
-                InjectIdentityPassthrough(convertAddressToRef);
-            }
-            var convertRefToAddress = baseType.Methods.FirstOrDefault(m =>
-                m.Name == "ConvertRefToAddress" && m.Parameters.Count == 1
-                && m.Parameters[0].ParameterType.IsByReference
-                && m.ReturnType.MetadataType == MetadataType.IntPtr);
-            if (convertRefToAddress != null)
-            {
-                InjectIdentityPassthrough(convertRefToAddress);
-            }
-            }
+            //// ConvertAddressToRef<T>(IntPtr) -> ref T and ConvertRefToAddress<T>(in T) -> IntPtr
+            //// are identity passthroughs: ldarg.0; ret.
+            //if (mode == "all" || mode == "prim")
+            //{
+            //var convertAddressToRef = baseType.Methods.FirstOrDefault(m =>
+            //    m.Name == "ConvertAddressToRef" && m.Parameters.Count == 1
+            //    && m.Parameters[0].ParameterType.MetadataType == MetadataType.IntPtr
+            //    && m.ReturnType.IsByReference);
+            //if (convertAddressToRef != null)
+            //{
+            //    InjectIdentityPassthrough(convertAddressToRef);
+            //}
+            //var convertRefToAddress = baseType.Methods.FirstOrDefault(m =>
+            //    m.Name == "ConvertRefToAddress" && m.Parameters.Count == 1
+            //    && m.Parameters[0].ParameterType.IsByReference
+            //    && m.ReturnType.MetadataType == MetadataType.IntPtr);
+            //if (convertRefToAddress != null)
+            //{
+            //    InjectIdentityPassthrough(convertRefToAddress);
+            //}
+            //}
 
             // InvokeFallback ByRefLocalSlot fixup: before the non-generic Invoke(u1..un) call,
             // each ux local gets FixupByRefLocalSlot<!Ux>(ref ux, ldarga pX) — when Ux is
