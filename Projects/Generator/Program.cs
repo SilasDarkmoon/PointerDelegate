@@ -194,6 +194,8 @@ namespace Generator
 
             // Bisect switch for ILC debugging: all | pf | prim | lref | none | unmonly.
             var mode = Environment.GetEnvironmentVariable("PD_INJ_MODE") ?? "all";
+            // InvokeRefReturn arity cap for ILC-crash bisection (PD_INJ_MAXU=1 → only U1).
+            var maxU = int.TryParse(Environment.GetEnvironmentVariable("PD_INJ_MAXU"), out var mu) ? mu : int.MaxValue;
             // unmonly (2026-09-28 experiment): InvokePlain woven with ONLY the unmanaged
             // calli (no _IsUnmanaged branch, no managed calli sites). Tests whether the
             // mixed-convention branching is what makes IL2CPP translate the unmanaged
@@ -215,10 +217,22 @@ namespace Generator
                         // The non-generic Invoke is now a plain-C# trampoline (runtime-Emit
                         // PlainInvoker first, InvokePlain fallback). InvokePlain — plain R
                         // return, calli to Pfn — is the only woven method left in PointerFunc.
-                        if (method.Name != "InvokePlain") continue;
+                        if (method.Name == "InvokePlain")
+                        {
 
-                        InjectPointerFuncNonGenericInvoke(method, type, retcField, module, unmonly);
-                        RemoveNop(method);
+                            InjectPointerFuncNonGenericInvoke(method, type, retcField, module, unmonly);
+                            RemoveNop(method);
+                        }
+                        // InvokeRefReturn — ref R return, managed calli with a ref-R
+                        // callsite return, params pushed as-is (in Ux byref bits) —
+                        // the GC-safe ref-return path for InvokeFallback (no IntPtr
+                        // transit, unlike ConvertAddressToRef).
+                        else if (method.Name == "InvokeRefReturn")
+                        {
+                            if (type.GenericParameters.Count - 1 > maxU) continue;
+                            InjectPointerFuncInvokeRefReturn(method, type, module);
+                            RemoveNop(method);
+                        }
                     }
                 }
             }
@@ -246,17 +260,34 @@ namespace Generator
             //}
             //}
 
-            // InvokeFallback ByRefLocalSlot fixup: before the non-generic Invoke(u1..un) call,
-            // each ux local gets FixupByRefLocalSlot<!Ux>(ref ux, ldarga pX) — when Ux is
-            // ByRefLocalSlot, ux.Ref2Ref.Address is overwritten with the address of
-            // InvokeFallback's own `in Ux pX` parameter slot (a GC-tracked byref the
-            // collector keeps updated), so the ByRefLocalSlot the callee receives keeps
-            // tracking heap compaction on the fallback path. NOTE: the fixup helper
-            // calls ConvertRefToAddress/ConvertAddressToRef, so the prim section above
-            // must run too (it does under "all").
+            // Here to inject ConvertRef<F, T>
+            var convertRef = baseType.Methods.Single(m =>
+                m.Name == "ConvertRef" && m.GenericParameters.Count == 2
+                && m.Parameters.Count == 1);
+            InjectIdentityPassthrough(convertRef);
+
+            // InvokeFallback full rebuild (idempotent: the body is cleared and re-emitted,
+            // so re-running the Generator on an already-woven dll is safe). The per-parameter
+            // ConvertParam chain is replaced by a three-branch sequence keyed on typeof(Ux):
+            //   ByRefParam     → ldarg pX into a PINNED local (pins the byref target for the
+            //                    whole call window), then snapshot the address into ux — the
+            //                    pinned slot is reported by GCInfo, so ux._Address stays
+            //                    valid across every safepoint until the wrapper returns;
+            //   ByRefLocalSlot → ldarga pX (this method's parameter slot address) into ux —
+            //                    slot-indirect, the callee derefs the GC-tracked slot;
+            //   otherwise      → ldarg pX + ldobj (plain value copy).
+            // The _ReturnCategory branch (InvokeRefReturn ref-return path / Invoke value
+            // path) and the pin release before every ret are re-emitted as well.
             if (mode == "all" || mode == "lref")
             {
-                InjectInvokeFallbackByRefLocalSlotFixup(asm);
+                if (Environment.GetEnvironmentVariable("PD_INJ_LEGACY") == "1")
+                {
+                    InjectInvokeFallbackByRefLocalSlotFixup(asm);
+                }
+                else
+                {
+                    RebuildInvokeFallbackBodies(asm);
+                }
             }
 
             EmitRefSafetyRulesAttribute(asm);
@@ -599,6 +630,61 @@ namespace Generator
             emitter.Emit(OpCodes.Ret);
         }
 
+        /// <summary>
+        /// Injects InvokeRefReturn(U1 u1, ..., Un un) -> ref R for PointerFunc`n:
+        /// pushes the VALUE parameters as-is (ldarg — the same push InvokePlain uses;
+        /// the u1..un arguments are the ConvertParam-converted values from
+        /// InvokeFallback), pushes _Pfn, then a single managed calli whose CALLSITE
+        /// RETURN is ref R and whose callsite params are U1..Un (values, matching
+        /// the ldarg pushes), and returns the calli result directly — the byref
+        /// stays on the eval stack the whole time, GC-tracked, with NO IntPtr
+        /// transit (unlike the old ConvertAddressToRef snapshot path). The out r
+        /// parameter is intentionally NOT filled here — InvokeFallback fills it
+        /// with the snapshot copy after the call.
+        /// </summary>
+        static void InjectPointerFuncInvokeRefReturn(MethodDefinition method, TypeDefinition type, ModuleDefinition module)
+        {
+            var pfnField = type.GetField("_Pfn");
+
+            method.Body.Instructions.Clear();
+            method.Body.Variables.Clear();
+            method.Body.ExceptionHandlers.Clear();
+            var emitter = method.Body.GetILProcessor();
+
+            var returnType = GetCallSiteReturnType(type);          // R (generic param 0)
+            var retByRef = new ByReferenceType(returnType);      // ref R
+
+            // push params as-is: u1..un (VALUE parameters — ldarg loads the value,
+            // the same push InvokePlain uses; the values are the ConvertParam
+            // conversions done by InvokeFallback before calling here).
+            for (int i = 0; i < method.Parameters.Count; i++)
+            {
+                emitter.Emit(OpCodes.Ldarg, method.Parameters[i]);
+            }
+
+            // push pfn: ldarg.0; ldfld _Pfn through the OPEN generic instantiation
+            // (TypeSpec + MemberRef) — the ILC-safe shape (see the note in
+            // InjectPointerFuncNonGenericInvoke).
+            emitter.Emit(OpCodes.Ldarg_0);
+            var openSelf = new GenericInstanceType(type);
+            foreach (var gp in type.GenericParameters)
+                openSelf.GenericArguments.Add(gp);
+            var pfnRef = new FieldReference(pfnField.Name, pfnField.FieldType, openSelf);
+            emitter.Emit(OpCodes.Ldfld, pfnRef);
+
+            // calli ref R(U1, ..., Un) — managed convention; callsite params are the
+            // VALUE types U1..Un (matching the ldarg pushes, same as InvokePlain's
+            // callsite); only the return is byref.
+            var callSite = new CallSite(retByRef);
+            callSite.CallingConvention = MethodCallingConvention.Default;
+            foreach (var p in GetCallSiteParams(type))
+            {
+                callSite.Parameters.Add(new ParameterDefinition(p));
+            }
+            emitter.Emit(OpCodes.Calli, callSite);
+            emitter.Emit(OpCodes.Ret);
+        }
+
         // Identity passthrough: ldarg.0; ret — used for ConvertAddressToRef<T>(IntPtr) -> ref T
         // and ConvertRefToAddress<T>(in T) -> IntPtr (the byref parameter is already the address).
         static void InjectIdentityPassthrough(MethodDefinition method)
@@ -609,6 +695,352 @@ namespace Generator
             var emitter = method.Body.GetILProcessor();
             emitter.Emit(OpCodes.Ldarg_0);
             emitter.Emit(OpCodes.Ret);
+        }
+
+        /// <summary>
+        /// Rebuilds every parameterized InvokeFallback(out R r, in U1 p1, ..., in Un pn) body of
+        /// PointerFunc`n / FreeFunc`n from scratch. Idempotent: the body (instructions, locals,
+        /// exception handlers) is cleared first, so re-running the Generator on an already-woven
+        /// dll produces the same result. The C#-emitted ConvertParam chain is replaced by a
+        /// per-parameter three-branch sequence keyed on typeof(Ux):
+        ///   ByRefParam     → ldarg pX stored into a PINNED local (the pinned slot is reported
+        ///                    by GCInfo, so the byref target object cannot be relocated while
+        ///                    the address snapshot copied into ux._Address is in flight), then
+        ///                    ldloc + conv.u + ConvertParam&lt;IntPtr, Ux&gt; into ux;
+        ///   ByRefLocalSlot → ldarga pX (this method's own `in Ux` parameter slot address) +
+        ///                    conv.u + ConvertParam&lt;IntPtr, Ux&gt; into ux — slot-indirect,
+        ///                    the callee reads the GC-updated current address through it;
+        ///   otherwise      → ldarg pX + ldobj Ux (plain value copy).
+        /// The _ReturnCategory == 2 branch is re-emitted (ref-return path via InvokeRefReturn
+        /// with the out-r address snapshot; value path via Invoke), and every ret is preceded
+        /// by the pin-release sequence (ldc.i4.0; conv.u; stloc pinned) so each pinned local's
+        /// liveness covers the wrapper-call safepoints.
+        /// </summary>
+        static void RebuildInvokeFallbackBodies(AssemblyDefinition asm)
+        {
+            var module = asm.MainModule;
+            var baseType = module.GetType("Mod.LowLevel.FreeInvokableBase");
+
+            // ConvertParam<P, U>(P p) — the single-parameter bit-reinterpretation overload.
+            var convertParam = baseType.Methods.Single(m =>
+                m.Name == "ConvertParam" && m.GenericParameters.Count == 2
+                && m.Parameters.Count == 1);
+            var byRefParamType = module.GetType("Mod.LowLevel.ByRefParam");
+            var byRefLocalSlotType = module.GetType("Mod.LowLevel.ByRefLocalSlot");
+            var retcField = baseType.GetField("_ReturnCategory");
+
+            var getTypeFromHandle = module.ImportReference(
+                typeof(Type).GetMethod("GetTypeFromHandle", new Type[] { typeof(RuntimeTypeHandle) }));
+            var typeOpEquality = module.ImportReference(
+                typeof(Type).GetMethod("op_Equality", new Type[] { typeof(Type), typeof(Type) }));
+            // Cecil 0.10 maps System.IntPtr to ELEMENT_TYPE_I (native int) both via
+            // TypeSystem.IntPtr and ImportReference(typeof(IntPtr)) — and native int is
+            // NOT a legal generic argument. Reuse the C#-compiler-written IntPtr
+            // reference found in the two-arg ConvertParam overload's IL (its isref
+            // branch calls ConvertParam<IntPtr, U>), and the op_Explicit(void*) bridge
+            // from ConvertRefToAddress's IL.
+            TypeReference intPtrType = null;
+            MethodReference intPtrOpExplicit = null;
+            var convertParam2 = baseType.Methods.Single(m =>
+                m.Name == "ConvertParam" && m.GenericParameters.Count == 2
+                && m.Parameters.Count == 2);
+            foreach (var inst in convertParam2.Body.Instructions)
+            {
+                if (inst.OpCode == OpCodes.Call
+                    && inst.Operand is GenericInstanceMethod gim
+                    && gim.GenericArguments.Count == 2)
+                {
+                    intPtrType = gim.GenericArguments[0];
+                    break;
+                }
+            }
+            var convRefToAddress = baseType.Methods.Single(m =>
+                m.Name == "ConvertRefToAddress" && m.GenericParameters.Count == 1
+                && m.Parameters.Count == 1);
+            foreach (var inst in convRefToAddress.Body.Instructions)
+            {
+                if (inst.OpCode == OpCodes.Call
+                    && inst.Operand is MethodReference mr && mr.Name == "op_Explicit")
+                {
+                    intPtrOpExplicit = mr;
+                    break;
+                }
+            }
+
+            int patched = 0, skipped = 0;
+            foreach (var type in module.Types)
+            {
+                if (type.Namespace != "Mod.LowLevel") continue;
+                if (!type.Name.StartsWith("PointerFunc") && !type.Name.StartsWith("FreeFunc")) continue;
+                foreach (var method in type.Methods)
+                {
+                    if (method.Name != "InvokeFallback") continue;
+                    if (!method.HasBody || method.Parameters.Count < 2) continue;
+                    if (RebuildInvokeFallbackBody(method, type, module, convertParam,
+                        byRefParamType, byRefLocalSlotType, retcField,
+                        getTypeFromHandle, typeOpEquality, intPtrType, intPtrOpExplicit)) patched++;
+                    else skipped++;
+                }
+            }
+            Console.WriteLine($"InvokeFallback rebuild: {patched} methods rebuilt, {skipped} skipped");
+        }
+
+        static bool RebuildInvokeFallbackBody(MethodDefinition method, TypeDefinition type, ModuleDefinition module,
+            MethodReference convertParam, TypeReference byRefParamType, TypeReference byRefLocalSlotType,
+            FieldReference retcField, MethodReference getTypeFromHandle, MethodReference typeOpEquality,
+            TypeReference intPtrType, MethodReference intPtrOpExplicit)
+        {
+            var body = method.Body;
+            int n = method.Parameters.Count - 1;    // Ux count (param 0 = `out R r`)
+            var gpR = type.GenericParameters[0];    // !R
+            var rOut = method.Parameters[0];        // out R r
+
+            // Bisect switch for IPE debugging: 0 = plain value-copy params only (no
+            // typeof checks, no pinning, not even pinned local declarations), 1 = +
+            // typeof three-branch (no pin), 2 = full.
+            var step = int.TryParse(Environment.GetEnvironmentVariable("PD_INJ_STEP"), out var s) ? s : 2;
+
+            // Locate this type's non-generic Invoke(U1..Un) and InvokeRefReturn(U1..Un).
+            MethodDefinition invoke = null, invokeRefReturn = null;
+            foreach (var m in type.Methods)
+            {
+                if (m.HasGenericParameters || m.Parameters.Count != n) continue;
+                if (m.Name == "Invoke") invoke = m;
+                else if (m.Name == "InvokeRefReturn") invokeRefReturn = m;
+            }
+            if (invoke == null || invokeRefReturn == null) return false;
+
+            // Same-type method calls must spell the OPEN generic instantiation
+            // (PointerFunc`n<!R, !U1..!Un>) as the declaring type — a bare
+            // TypeDefinition declaring type is exactly what makes RyuJIT throw
+            // InvalidProgramException on the woven body.
+            var openSelf = new GenericInstanceType(type);
+            foreach (var gp2 in type.GenericParameters) openSelf.GenericArguments.Add(gp2);
+            var invokeRef = invokeRefReturn.GetReference(openSelf);
+            var invokeSelfRef = invoke.GetReference(openSelf);
+
+            // Clear and rebuild — idempotent by construction.
+            body.Instructions.Clear();
+            body.Variables.Clear();
+            body.ExceptionHandlers.Clear();
+
+            // Locals: per param ux (Ux value) + pinned pux (pinned Ux& — the exact shape
+            // Roslyn emits for `fixed (Ux* p = &x)` over a generic Ux: a pinned BYREF local,
+            // not a pinned pointer; RyuJIT rejects pinned generic-pointer locals), then
+            // result (R&) and tmp (R). Cecil 0.10 expresses the pinned flag by wrapping
+            // the variable type in PinnedType.
+            var uLocals = new VariableDefinition[n];
+            var pinnedLocals = new VariableDefinition[n];
+            for (int i = 0; i < n; i++)
+            {
+                var gp = type.GenericParameters[1 + i];
+                uLocals[i] = new VariableDefinition(gp);
+                body.Variables.Add(uLocals[i]);
+                if (step >= 2)
+                {
+                    pinnedLocals[i] = new VariableDefinition(new PinnedType(new ByReferenceType(gp)));
+                    body.Variables.Add(pinnedLocals[i]);
+                }
+            }
+            var resultLocal = new VariableDefinition(new ByReferenceType(gpR));
+            body.Variables.Add(resultLocal);
+            var tmpLocal = new VariableDefinition(gpR);
+            body.Variables.Add(tmpLocal);
+            body.MaxStackSize = Math.Max(body.MaxStackSize, 8);
+
+            var seq = new List<Instruction>();
+            void Emit(OpCode op, object operand = null)
+            {
+                Instruction inst;
+                if (operand == null) inst = Instruction.Create(op);
+                else if (operand is ParameterDefinition p) inst = Instruction.Create(op, p);
+                else if (operand is VariableDefinition v) inst = Instruction.Create(op, v);
+                else if (operand is TypeReference t) inst = Instruction.Create(op, t);
+                else if (operand is MethodReference m) inst = Instruction.Create(op, m);
+                else if (operand is FieldReference f) inst = Instruction.Create(op, f);
+                else if (operand is Instruction i) inst = Instruction.Create(op, i);
+                else inst = Instruction.Create(op, (int)operand);
+                seq.Add(inst);
+            }
+            MethodReference ConvParam(int i)
+            {
+                var gim = new GenericInstanceMethod(convertParam);
+                gim.GenericArguments.Add(intPtrType);
+                gim.GenericArguments.Add(type.GenericParameters[1 + i]);
+                return gim;
+            }
+
+            // Emit a typeof(X) == typeof(Y) comparison; returns the brfalse placeholder
+            // (Cecil 0.10 rejects null targets, so the previous instruction is used as
+            // a temporary target and overwritten by the caller).
+            Instruction EmitTypeCheck(TypeReference genericArg, TypeReference concrete)
+            {
+                Emit(OpCodes.Ldtoken, genericArg);
+                Emit(OpCodes.Call, getTypeFromHandle);
+                Emit(OpCodes.Ldtoken, concrete);
+                Emit(OpCodes.Call, getTypeFromHandle);
+                Emit(OpCodes.Call, typeOpEquality);
+                var brfalse = Instruction.Create(OpCodes.Brfalse, seq[seq.Count - 1]);
+                seq.Add(brfalse);
+                return brfalse;
+            }
+
+            // ---- per-parameter conversion ----
+            // brDone targets are backfilled after the loop (each points at the first
+            // instruction of the next parameter's segment, or at the branch test).
+            var brDoneFixups = new List<(Instruction br, int paramIndex)>();
+            for (int i = 0; i < n; i++)
+            {
+                var gp = type.GenericParameters[1 + i];
+                var pX = method.Parameters[1 + i];
+
+                if (step == 0)
+                {
+                    // plain value copy only
+                    Emit(OpCodes.Ldarg, pX);
+                    Emit(OpCodes.Ldobj, gp);
+                    Emit(OpCodes.Stloc, uLocals[i]);
+                    continue;
+                }
+
+                // if (typeof(Ux) == typeof(ByRefParam)) — pin the byref target, snapshot its address.
+                // ldarg + stloc mirrors Roslyn's fixed prologue; ldloc + conv.u + op_Explicit
+                // bridges the pinned byref bits into the IntPtr struct ConvertParam expects.
+                var brf1 = EmitTypeCheck(gp, byRefParamType);
+                if (step >= 2)
+                {
+                    Emit(OpCodes.Ldarg, pX);
+                    Emit(OpCodes.Stloc, pinnedLocals[i]);
+                    Emit(OpCodes.Ldloc, pinnedLocals[i]);
+                }
+                else
+                {
+                    Emit(OpCodes.Ldarg, pX);
+                }
+                Emit(OpCodes.Conv_U);
+                Emit(OpCodes.Call, intPtrOpExplicit);
+                Emit(OpCodes.Call, ConvParam(i));
+                Emit(OpCodes.Stloc, uLocals[i]);
+                var br1 = Instruction.Create(OpCodes.Br, seq[seq.Count - 1]);
+                seq.Add(br1);
+
+                // notBrp anchor: if (typeof(Ux) == typeof(ByRefLocalSlot)) — slot indirect.
+                var notBrpAnchor = Instruction.Create(OpCodes.Ldtoken, gp);
+                seq.Add(notBrpAnchor);
+                brf1.Operand = notBrpAnchor;
+                Emit(OpCodes.Call, getTypeFromHandle);
+                Emit(OpCodes.Ldtoken, byRefLocalSlotType);
+                Emit(OpCodes.Call, getTypeFromHandle);
+                Emit(OpCodes.Call, typeOpEquality);
+                var brf2 = Instruction.Create(OpCodes.Brfalse, seq[seq.Count - 1]);
+                seq.Add(brf2);
+                Emit(OpCodes.Ldarga, pX);
+                Emit(OpCodes.Conv_U);
+                Emit(OpCodes.Call, intPtrOpExplicit);
+                Emit(OpCodes.Call, ConvParam(i));
+                Emit(OpCodes.Stloc, uLocals[i]);
+                var br2 = Instruction.Create(OpCodes.Br, seq[seq.Count - 1]);
+                seq.Add(br2);
+
+                // value branch anchor: else — plain value copy.
+                var valueAnchor = Instruction.Create(OpCodes.Ldarg, pX);
+                seq.Add(valueAnchor);
+                brf2.Operand = valueAnchor;
+                Emit(OpCodes.Ldobj, gp);
+                Emit(OpCodes.Stloc, uLocals[i]);
+
+                brDoneFixups.Add((br1, i));
+                brDoneFixups.Add((br2, i));
+            }
+
+            // ---- _ReturnCategory == 2 branch test ----
+            var branchTest = Instruction.Create(OpCodes.Ldarg_0);
+            seq.Add(branchTest);
+            // Backfill the brDone targets: segment i ends right before segment i+1 starts.
+            if (brDoneFixups.Count > 0)
+            {
+                int[] segStarts = new int[n + 1];
+                segStarts[0] = 0;
+                {
+                    int seg = 1, idx = 1;
+                    while (seg < n && idx < seq.Count)
+                    {
+                        // each segment i>0 opens with ldtoken !Ui of its own typeof check
+                        if (seq[idx].OpCode == OpCodes.Ldtoken
+                            && seq[idx].Operand == type.GenericParameters[1 + seg])
+                        {
+                            segStarts[seg++] = idx;
+                        }
+                        idx++;
+                    }
+                }
+                segStarts[n] = seq.IndexOf(branchTest);
+                foreach (var (br, paramIndex) in brDoneFixups)
+                {
+                    br.Operand = seq[segStarts[paramIndex + 1]];
+                }
+            }
+
+            Emit(OpCodes.Ldfld, retcField);
+            Emit(OpCodes.Ldc_I4_2);
+            var bne = Instruction.Create(OpCodes.Bne_Un, seq[seq.Count - 1]);
+            seq.Add(bne);
+
+            // ---- ref-return path: result = InvokeRefReturn(u1..un); r = default;
+            //      r._Address = ConvertParam<IntPtr, R>(result); return ref result ----
+            Emit(OpCodes.Ldarg_0);
+            for (int i = 0; i < n; i++) Emit(OpCodes.Ldloc, uLocals[i]);
+            Emit(OpCodes.Call, invokeRef);
+            Emit(OpCodes.Stloc, resultLocal);
+            Emit(OpCodes.Ldarg, rOut);
+            Emit(OpCodes.Initobj, gpR);
+            Emit(OpCodes.Ldarg, rOut);
+            Emit(OpCodes.Ldloc, resultLocal);
+            Emit(OpCodes.Conv_U);
+            Emit(OpCodes.Call, intPtrOpExplicit);
+            var convToR = new GenericInstanceMethod(convertParam);
+            convToR.GenericArguments.Add(intPtrType);
+            convToR.GenericArguments.Add(gpR);
+            Emit(OpCodes.Call, convToR);
+            Emit(OpCodes.Stobj, gpR);
+            if (step >= 2)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    Emit(OpCodes.Ldc_I4_0);
+                    Emit(OpCodes.Conv_U);
+                    Emit(OpCodes.Stloc, pinnedLocals[i]);
+                }
+            }
+            Emit(OpCodes.Ldloc, resultLocal);
+            Emit(OpCodes.Ret);
+
+            // ---- value path: r = Invoke(u1..un); return ref r ----
+            var elseAnchor = Instruction.Create(OpCodes.Ldarg_0);
+            seq.Add(elseAnchor);
+            bne.Operand = elseAnchor;
+            for (int i = 0; i < n; i++) Emit(OpCodes.Ldloc, uLocals[i]);
+            Emit(OpCodes.Call, invokeSelfRef);
+            Emit(OpCodes.Stloc, tmpLocal);
+            Emit(OpCodes.Ldarg, rOut);
+            Emit(OpCodes.Ldloc, tmpLocal);
+            Emit(OpCodes.Stobj, gpR);
+            if (step >= 2)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    Emit(OpCodes.Ldc_I4_0);
+                    Emit(OpCodes.Conv_U);
+                    Emit(OpCodes.Stloc, pinnedLocals[i]);
+                }
+            }
+            Emit(OpCodes.Ldarg, rOut);
+            Emit(OpCodes.Ret);
+
+            // Append everything in order.
+            var il = body.GetILProcessor();
+            foreach (var inst in seq) il.Append(inst);
+            return true;
         }
 
         /// <summary>
@@ -654,42 +1086,77 @@ namespace Generator
             var body = method.Body;
             int n = method.Parameters.Count - 1;    // Ux param count (param 0 = `out R r`)
 
-            // locate the non-generic Invoke(u1..un) call
-            Instruction invokeCall = null;
+            // 1) locate each ConvertParam<Ux,Ux>(P&, bool) call and the stloc that
+            //    immediately follows it → the local slot holding the converted uX.
+            var locals = new VariableDefinition[n];
+            int found = 0;
             foreach (var inst in body.Instructions)
             {
-                if (inst.OpCode != OpCodes.Call && inst.OpCode != OpCodes.Callvirt) continue;
-                if (!(inst.Operand is MethodReference mref)) continue;
-                if (mref.Name != "Invoke" || mref.HasGenericParameters) continue;
-                if (mref.Parameters.Count != n) continue;
-                invokeCall = inst;
-                break;
+                if (found == n) break;
+                if (inst.OpCode != OpCodes.Call) continue;
+                if (!(inst.Operand is MethodReference mr)) continue;
+                // generic instantiation calls report HasGenericParameters == false
+                // in Cecil (type args are resolved into the GenericInstanceMethod),
+                // so match on the (element) method name only.
+                if (mr.Name != "ConvertParam") continue;
+                int idx = GetStlocIndex(inst.Next);
+                if (idx < 0 || idx >= body.Variables.Count) return false;
+                locals[found++] = body.Variables[idx];
             }
-            if (invokeCall == null) return false;
+            if (found != n) return false;
 
-            // walk back over the [ldloc un]...[ldloc u1] argument pushes
-            var locals = new VariableDefinition[n];
-            var cursor = invokeCall.Previous;
-            for (int i = n - 1; i >= 0; i--)
+            // 2) insertion point: BEFORE the `_ReturnCategory == 2` branch test
+            //    (ldarg.0; ldfld _ReturnCategory; ldc.i4.2; bne.un ...) so BOTH
+            //    branches receive fixed-up slots. Previously the fixups were only
+            //    inserted before the non-generic Invoke call (value-return path);
+            //    the ref-return path (call InvokeRefReturn) ran with raw
+            //    ConvertParam output — under ilc ConvertRefToAddress compiles to
+            //    one-level ldarg semantics and the ByRefLocalSlot lost GC tracking
+            //    (RefInvoke NullReferenceException on NativeAOT, ffH/ffJ probes).
+            Instruction insertionPoint = null;
+            for (int i = 0; i < body.Instructions.Count - 3; i++)
             {
-                if (cursor == null || !TryGetLdlocLocal(cursor, body, out locals[i])) return false;
-                cursor = cursor.Previous;
+                var a = body.Instructions[i];
+                var b = body.Instructions[i + 1];
+                var c = body.Instructions[i + 2];
+                var d = body.Instructions[i + 3];
+                if (IsLdarg0(a)
+                    && b.OpCode == OpCodes.Ldfld && (b.Operand as FieldReference)?.Name == "_ReturnCategory"
+                    && c.OpCode == OpCodes.Ldc_I4_2
+                    && (d.OpCode == OpCodes.Bne_Un || d.OpCode == OpCodes.Bne_Un_S))
+                {
+                    insertionPoint = a;
+                    break;
+                }
             }
-            // cursor must now be the receiver push (ldarg.0 / ldarg.s 0)
-            if (cursor == null || !IsLdarg0(cursor)) return false;
+            if (insertionPoint == null) return false;   // unexpected shape — don't guess
 
-            // insert the fixups before the receiver push
             var il = body.GetILProcessor();
             for (int i = 0; i < n; i++)
             {
                 var gim = new GenericInstanceMethod(fixup);
                 gim.GenericArguments.Add(type.GenericParameters[1 + i]);    // U(i+1)
-                il.InsertBefore(cursor, il.Create(OpCodes.Ldloca, locals[i]));
-                il.InsertBefore(cursor, il.Create(OpCodes.Ldarga, method.Parameters[1 + i]));
-                il.InsertBefore(cursor, il.Create(OpCodes.Conv_U));
-                il.InsertBefore(cursor, il.Create(OpCodes.Call, gim));
+                il.InsertBefore(insertionPoint, il.Create(OpCodes.Ldloca, locals[i]));
+                il.InsertBefore(insertionPoint, il.Create(OpCodes.Ldarga, method.Parameters[1 + i]));
+                il.InsertBefore(insertionPoint, il.Create(OpCodes.Conv_U));
+                il.InsertBefore(insertionPoint, il.Create(OpCodes.Call, gim));
             }
             return true;
+        }
+
+        static int GetStlocIndex(Instruction inst)
+        {
+            if (inst == null) return -1;
+            var op = inst.OpCode;
+            if (op == OpCodes.Stloc || op == OpCodes.Stloc_S)
+            {
+                if (inst.Operand is VariableDefinition vd) return vd.Index;
+            }
+            if (op == OpCodes.Stloc_0) return 0;
+            if (op == OpCodes.Stloc_1) return 1;
+            if (op == OpCodes.Stloc_2) return 2;
+            if (op == OpCodes.Stloc_3) return 3;
+            return -1;
         }
 
         static bool TryGetLdlocLocal(Instruction inst, MethodBody body, out VariableDefinition local)

@@ -84,7 +84,7 @@ namespace Mod.LowLevel
         public FunctionPointer(IntPtr pfn, bool unmanaged)
         {
             Pfn = pfn;
-            _IsUnmanaged= unmanaged;
+            _IsUnmanaged = unmanaged;
         }
 
         public static implicit operator IntPtr(FunctionPointer thiz)
@@ -305,15 +305,16 @@ namespace Mod.LowLevel
         }
         protected static ref T ConvertRef<F, T>(in F f)
         {
-#pragma warning disable CS8500
-            unsafe
-            {
-                fixed (F* pf = &f)
-                {
-                    return ref *(T*)(void*)pf;
-                }
-            }
-#pragma warning restore CS8500
+            throw new NotImplementedException();
+//#pragma warning disable CS8500
+//            unsafe
+//            {
+//                fixed (F* pf = &f)
+//                {
+//                    return ref *(T*)(void*)pf;
+//                }
+//            }
+//#pragma warning restore CS8500
         }
         /// <summary>
         /// InvokeFallback ByRefLocalSlot fixup (invoked from Generator-injected IL only): when T
@@ -421,33 +422,38 @@ namespace Mod.LowLevel
         //}
         #endregion
     }
-    public abstract class FreeInvokable<R> : FreeInvokableBase, IFreeInvokableFunc<R>
+    public abstract class FreeInvokable<R> : FreeInvokableBase, IPlainInvokableFunc<R>, IFreeInvokableFunc<R>
     {
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
         }
-        public abstract ref R Invoke(out R r);
-        public virtual R Invoke()
+        R IPlainInvokableFunc<R>.Invoke()
         {
-            return FreeInvokable.Invoke(this);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc<R>.Invoke(out R r)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1> : FreeInvokableBase, IFreeInvokableFunc1<R>
+    public abstract class FreeInvokable<R, U1> : FreeInvokableBase, IPlainInvokableFunc<R, U1>, IFreeInvokableFunc1<R>
     {
         protected FreeInvokable()
         {
             _ReturnCategory = JudgeReturnCategory(typeof(R));
             SetRefParamFlag(0, typeof(U1));
         }
-        public abstract R Invoke(U1 p1);
-        public abstract ref R Invoke<P1>(out R r, in P1 p1);
-        public R Invoke<P1>(in P1 p1)
+        R IPlainInvokableFunc<R, U1>.Invoke(U1 u1)
         {
-            return FreeInvokable.Invoke(this, in p1);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc1<R>.Invoke<P1>(out R r, in P1 p1)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2> : FreeInvokableBase, IFreeInvokableFunc2<R>
+    public abstract class FreeInvokable<R, U1, U2> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2>, IFreeInvokableFunc2<R>
     {
         protected FreeInvokable()
         {
@@ -455,14 +461,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(0, typeof(U1));
             SetRefParamFlag(1, typeof(U2));
         }
-        public abstract R Invoke(U1 p1, U2 p2);
-        public abstract ref R Invoke<P1, P2>(out R r, in P1 p1, in P2 p2);
-        public R Invoke<P1, P2>(in P1 p1, in P2 p2)
+        R IPlainInvokableFunc<R, U1, U2>.Invoke(U1 u1, U2 u2)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc2<R>.Invoke<P1, P2>(out R r, in P1 p1, in P2 p2)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3> : FreeInvokableBase, IFreeInvokableFunc3<R>
+    public abstract class FreeInvokable<R, U1, U2, U3> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3>, IFreeInvokableFunc3<R>
     {
         protected FreeInvokable()
         {
@@ -471,14 +479,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(1, typeof(U2));
             SetRefParamFlag(2, typeof(U3));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3);
-        public abstract ref R Invoke<P1, P2, P3>(out R r, in P1 p1, in P2 p2, in P3 p3);
-        public R Invoke<P1, P2, P3>(in P1 p1, in P2 p2, in P3 p3)
+        R IPlainInvokableFunc<R, U1, U2, U3>.Invoke(U1 u1, U2 u2, U3 u3)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc3<R>.Invoke<P1, P2, P3>(out R r, in P1 p1, in P2 p2, in P3 p3)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4> : FreeInvokableBase, IFreeInvokableFunc4<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4>, IFreeInvokableFunc4<R>
     {
         protected FreeInvokable()
         {
@@ -488,14 +498,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(2, typeof(U3));
             SetRefParamFlag(3, typeof(U4));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4);
-        public abstract ref R Invoke<P1, P2, P3, P4>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4);
-        public R Invoke<P1, P2, P3, P4>(in P1 p1, in P2 p2, in P3 p3, in P4 p4)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc4<R>.Invoke<P1, P2, P3, P4>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5> : FreeInvokableBase, IFreeInvokableFunc5<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5>, IFreeInvokableFunc5<R>
     {
         protected FreeInvokable()
         {
@@ -506,14 +518,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(3, typeof(U4));
             SetRefParamFlag(4, typeof(U5));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5);
-        public R Invoke<P1, P2, P3, P4, P5>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc5<R>.Invoke<P1, P2, P3, P4, P5>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6> : FreeInvokableBase, IFreeInvokableFunc6<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6>, IFreeInvokableFunc6<R>
     {
         protected FreeInvokable()
         {
@@ -525,14 +539,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(4, typeof(U5));
             SetRefParamFlag(5, typeof(U6));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6);
-        public R Invoke<P1, P2, P3, P4, P5, P6>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc6<R>.Invoke<P1, P2, P3, P4, P5, P6>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7> : FreeInvokableBase, IFreeInvokableFunc7<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7>, IFreeInvokableFunc7<R>
     {
         protected FreeInvokable()
         {
@@ -545,14 +561,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(5, typeof(U6));
             SetRefParamFlag(6, typeof(U7));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6, P7>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7);
-        public R Invoke<P1, P2, P3, P4, P5, P6, P7>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6, in p7);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc7<R>.Invoke<P1, P2, P3, P4, P5, P6, P7>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8> : FreeInvokableBase, IFreeInvokableFunc8<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>, IFreeInvokableFunc8<R>
     {
         protected FreeInvokable()
         {
@@ -566,14 +584,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(6, typeof(U7));
             SetRefParamFlag(7, typeof(U8));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8);
-        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc8<R>.Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : FreeInvokableBase, IFreeInvokableFunc9<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>, IFreeInvokableFunc9<R>
     {
         protected FreeInvokable()
         {
@@ -588,14 +608,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(7, typeof(U8));
             SetRefParamFlag(8, typeof(U9));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9);
-        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc9<R>.Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : FreeInvokableBase, IFreeInvokableFunc10<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>, IFreeInvokableFunc10<R>
     {
         protected FreeInvokable()
         {
@@ -611,14 +633,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(8, typeof(U9));
             SetRefParamFlag(9, typeof(U10));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10);
-        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc10<R>.Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : FreeInvokableBase, IFreeInvokableFunc11<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>, IFreeInvokableFunc11<R>
     {
         protected FreeInvokable()
         {
@@ -635,14 +659,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(9, typeof(U10));
             SetRefParamFlag(10, typeof(U11));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11);
-        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc11<R>.Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : FreeInvokableBase, IFreeInvokableFunc12<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>, IFreeInvokableFunc12<R>
     {
         protected FreeInvokable()
         {
@@ -660,14 +686,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(10, typeof(U11));
             SetRefParamFlag(11, typeof(U12));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12);
-        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc12<R>.Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : FreeInvokableBase, IFreeInvokableFunc13<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>, IFreeInvokableFunc13<R>
     {
         protected FreeInvokable()
         {
@@ -686,14 +714,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(11, typeof(U12));
             SetRefParamFlag(12, typeof(U13));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13);
-        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc13<R>.Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : FreeInvokableBase, IFreeInvokableFunc14<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>, IFreeInvokableFunc14<R>
     {
         protected FreeInvokable()
         {
@@ -713,14 +743,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(12, typeof(U13));
             SetRefParamFlag(13, typeof(U14));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14);
-        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13, U14 u14)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13, in p14);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc14<R>.Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : FreeInvokableBase, IFreeInvokableFunc15<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>, IFreeInvokableFunc15<R>
     {
         protected FreeInvokable()
         {
@@ -741,14 +773,16 @@ namespace Mod.LowLevel
             SetRefParamFlag(13, typeof(U14));
             SetRefParamFlag(14, typeof(U15));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15);
-        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13, U14 u14, U15 u15)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13, in p14, in p15);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc15<R>.Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15)
+        {
+            throw new NotImplementedException();
         }
     }
-    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : FreeInvokableBase, IFreeInvokableFunc16<R>
+    public abstract class FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : FreeInvokableBase, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>, IFreeInvokableFunc16<R>
     {
         protected FreeInvokable()
         {
@@ -770,11 +804,13 @@ namespace Mod.LowLevel
             SetRefParamFlag(14, typeof(U15));
             SetRefParamFlag(15, typeof(U16));
         }
-        public abstract R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16);
-        public abstract ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16);
-        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16)
+        R IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>.Invoke(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13, U14 u14, U15 u15, U16 u16)
         {
-            return FreeInvokable.Invoke(this, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13, in p14, in p15, in p16);
+            throw new NotImplementedException();
+        }
+        ref R IFreeInvokableFunc16<R>.Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -904,6 +940,7 @@ namespace Mod.LowLevel
             // whole method), so the callee reading *(IntPtr*)slot.Ref2Ref.Address always
             // sees the current address of the caller's argument, across compacting GCs.
             var callSiteParams = new Type[Ux.Length];
+            var pinned = new List<System.Reflection.Emit.LocalBuilder>();
             for (int i = 0; i < Ux.Length; i++)
             {
                 if (Ux[i] == typeof(ByRefLocalSlot))
@@ -1066,10 +1103,10 @@ namespace Mod.LowLevel
     {
         bool IsUnmanaged { get; set; }
     }
-    public class PointerFunc<R> : FreeInvokable<R>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R> : FreeInvokable<R>, IPlainInvokableFunc<R>, IFreeInvokableFunc<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -1080,9 +1117,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke()
+        private delegate R PlainInvoker(IntPtr pfn);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke()
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1117,9 +1154,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke(out R r)
+        private ref R InvokeRefReturn()
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke(out R r)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1150,16 +1191,18 @@ namespace Mod.LowLevel
                 return ref del(_Pfn, out r);
             }
         }
-        protected ref R InvokeFallback(out R r)
+        private ref R InvokeFallback(out R r)
         {
-            var fallback = Invoke();
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn();
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = InvokePlain();
                 return ref r;
             }
         }
@@ -1168,10 +1211,10 @@ namespace Mod.LowLevel
             return MemberwiseClone() as PointerFunc<R>;
         }
     }
-    public class PointerFunc<R, U1> : FreeInvokable<R, U1>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1> : FreeInvokable<R, U1>, IPlainInvokableFunc<R, U1>, IFreeInvokableFunc1<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -1182,9 +1225,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1219,9 +1262,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1>(out R r, in P1 p1)
+        private ref R InvokeRefReturn(U1 u1)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1>(out R r, in P1 p1)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1256,29 +1303,45 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
-            var fallback = Invoke(u1);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1);
                 return ref r;
             }
         }
+
+        public R Invoke<P1>(in P1 p1)
+        {
+            return Invoke(out var r, in p1);
+        }
+
         public PointerFunc<R, U1> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1>;
         }
     }
-    public class PointerFunc<R, U1, U2> : FreeInvokable<R, U1, U2>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2> : FreeInvokable<R, U1, U2>, IPlainInvokableFunc<R, U1, U2>, IFreeInvokableFunc2<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -1289,9 +1352,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1326,9 +1389,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2>(out R r, in P1 p1, in P2 p2)
+        private ref R InvokeRefReturn(U1 u1, U2 u2)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2>(out R r, in P1 p1, in P2 p2)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1365,30 +1432,45 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
-            var fallback = Invoke(u1, u2);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2>(in P1 p1, in P2 p2)
+        {
+            return Invoke(out var r, in p1, in p2);
+        }
+
         public PointerFunc<R, U1, U2> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3> : FreeInvokable<R, U1, U2, U3>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3> : FreeInvokable<R, U1, U2, U3>, IPlainInvokableFunc<R, U1, U2, U3>, IFreeInvokableFunc3<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -1399,9 +1481,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1436,9 +1518,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3>(out R r, in P1 p1, in P2 p2, in P3 p3)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3>(out R r, in P1 p1, in P2 p2, in P3 p3)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1477,31 +1563,46 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
             var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
-            var fallback = Invoke(u1, u2, u3);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3>(in P1 p1, in P2 p2, in P3 p3)
+        {
+            return Invoke(out var r, in p1, in p2, in p3);
+        }
+
         public PointerFunc<R, U1, U2, U3> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4> : FreeInvokable<R, U1, U2, U3, U4>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4> : FreeInvokable<R, U1, U2, U3, U4>, IPlainInvokableFunc<R, U1, U2, U3, U4>, IFreeInvokableFunc4<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -1512,9 +1613,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1549,9 +1650,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1592,32 +1697,47 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
             var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
             var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
-            var fallback = Invoke(u1, u2, u3, u4);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4>(in P1 p1, in P2 p2, in P3 p3, in P4 p4)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5> : FreeInvokable<R, U1, U2, U3, U4, U5>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5> : FreeInvokable<R, U1, U2, U3, U4, U5>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5>, IFreeInvokableFunc5<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -1628,9 +1748,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1665,9 +1785,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1710,33 +1834,48 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
             var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
             var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
             var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
-            var fallback = Invoke(u1, u2, u3, u4, u5);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6> : FreeInvokable<R, U1, U2, U3, U4, U5, U6>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6> : FreeInvokable<R, U1, U2, U3, U4, U5, U6>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6>, IFreeInvokableFunc6<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -1747,9 +1886,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1784,9 +1923,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1831,7 +1974,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1839,26 +1990,33 @@ namespace Mod.LowLevel
             var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
             var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
             var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7>, IFreeInvokableFunc7<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -1869,9 +2027,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1906,9 +2064,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -1955,7 +2117,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -1964,26 +2134,33 @@ namespace Mod.LowLevel
             var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
             var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
             var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>, IFreeInvokableFunc8<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -1994,9 +2171,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2031,9 +2208,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2082,7 +2263,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -2092,26 +2281,33 @@ namespace Mod.LowLevel
             var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
             var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
             var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>, IFreeInvokableFunc9<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -2122,9 +2318,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2159,9 +2355,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2212,7 +2412,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -2223,26 +2431,33 @@ namespace Mod.LowLevel
             var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
             var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
             var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>, IFreeInvokableFunc10<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -2253,9 +2468,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2290,9 +2505,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2345,7 +2564,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -2357,26 +2584,33 @@ namespace Mod.LowLevel
             var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
             var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
             var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>, IFreeInvokableFunc11<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -2387,9 +2621,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2424,9 +2658,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2481,7 +2719,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -2494,26 +2740,33 @@ namespace Mod.LowLevel
             var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
             var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
             var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>, IFreeInvokableFunc12<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -2524,9 +2777,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2561,9 +2814,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2620,7 +2877,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -2634,26 +2899,33 @@ namespace Mod.LowLevel
             var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
             var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
             var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>, IFreeInvokableFunc13<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -2664,9 +2936,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2701,9 +2973,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2762,7 +3038,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -2777,26 +3061,33 @@ namespace Mod.LowLevel
             var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
             var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
             var u13 = ConvertParam<U13, U13>(in p13, GetRefParamFlag(12));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>, IFreeInvokableFunc14<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -2807,9 +3098,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2844,9 +3135,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13, U14 u14)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2907,7 +3202,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -2923,26 +3226,33 @@ namespace Mod.LowLevel
             var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
             var u13 = ConvertParam<U13, U13>(in p13, GetRefParamFlag(12));
             var u14 = ConvertParam<U14, U14>(in p14, GetRefParamFlag(13));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13, in p14);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>, IFreeInvokableFunc15<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -2953,9 +3263,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -2990,9 +3300,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14, in U15 u15);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13, U14 u14, U15 u15)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14, in U15 u15);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -3055,7 +3369,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -3072,26 +3394,33 @@ namespace Mod.LowLevel
             var u13 = ConvertParam<U13, U13>(in p13, GetRefParamFlag(12));
             var u14 = ConvertParam<U14, U14>(in p14, GetRefParamFlag(13));
             var u15 = ConvertParam<U15, U15>(in p15, GetRefParamFlag(14));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13, in p14, in p15);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>;
         }
     }
-    public class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>, IFunctionPointerUnmanagedIndicator
+    public sealed class PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>, IFreeInvokableFunc16<R>, IFunctionPointerUnmanagedIndicator
     {
-        protected IntPtr _Pfn;
-        protected bool _IsUnmanaged;
+        private IntPtr _Pfn;
+        private bool _IsUnmanaged;
         public bool IsUnmanaged { get => _IsUnmanaged; set => _IsUnmanaged = value; }
         public PointerFunc(IntPtr fn)
         {
@@ -3102,9 +3431,9 @@ namespace Mod.LowLevel
             _Pfn = fn;
             IsUnmanaged = unmanaged;
         }
-        protected delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16);
-        protected static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
+        private delegate R PlainInvoker(IntPtr pfn, U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16);
+        private static ConcurrentDictionary<ulong, PlainInvoker> _DynamicPlainInvokerCache = new ConcurrentDictionary<ulong, PlainInvoker>();
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -3139,9 +3468,13 @@ namespace Mod.LowLevel
         {
             throw new NotImplementedException();
         }
-        protected delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14, in U15 u15, in U16 u16);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16)
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13, U14 u14, U15 u15, U16 u16)
+        {
+            throw new NotImplementedException();
+        }
+        private delegate ref R DynamicInvoker(IntPtr pfn, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14, in U15 u15, in U16 u16);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
@@ -3206,7 +3539,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15, in U16 p16)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15, in U16 p16)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -3224,17 +3565,24 @@ namespace Mod.LowLevel
             var u14 = ConvertParam<U14, U14>(in p14, GetRefParamFlag(13));
             var u15 = ConvertParam<U15, U15>(in p15, GetRefParamFlag(14));
             var u16 = ConvertParam<U16, U16>(in p16, GetRefParamFlag(15));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16);
                 return ref r;
             }
         }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13, in p14, in p15, in p16);
+        }
+
         public PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> Clone()
         {
             return MemberwiseClone() as PointerFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>;
@@ -3252,6 +3600,12 @@ namespace Mod.LowLevel
         // ByRefLocalSlot::.ctor(IntPtr slotAddress) — wraps a byref-slot address (ByRefLocalSlot params).
         static readonly System.Reflection.ConstructorInfo s_byRefLocalSlotCtor =
             typeof(ByRefLocalSlot).GetConstructor(new[] { typeof(IntPtr) });
+        // IntPtr::op_Explicit(void*) — bridges the conv.u native int into the IntPtr
+        // struct ConvertParam<IntPtr, Ux> expects (raw native int → struct param is a
+        // type break the verifier rejects).
+        static readonly System.Reflection.MethodInfo s_intPtrOpExplicit =
+            typeof(IntPtr).GetMethod("op_Explicit",
+                new[] { typeof(void*) });
 
         static FreeFuncEmit()
         {
@@ -3287,6 +3641,7 @@ namespace Mod.LowLevel
                     : Type.GetType("System.Action`" + Ux.Length).MakeGenericType(Ux);
             var invoke = delType.GetMethod("Invoke");
             bool is_action = invoke.ReturnType == typeof(void);
+            bool is_reffunc = invoke.ReturnType.Name.Contains("&");
 
             // arg 0 = del (Delegate), arg 1 = r (R&), arg 2+i = ux (Ux&).
             var paramTypes = new Type[2 + Ux.Length];
@@ -3299,7 +3654,7 @@ namespace Mod.LowLevel
             {
                 var dm = new DynamicMethod("DynamicInvoke", returnType.MakeByRefType(), paramTypes,
                     typeof(FreeInvokableBase), true);
-                EmitBody(dm.GetILGenerator(), delType, returnType, Ux, returnFlag, paramFlags, invoke, is_action);
+                EmitBody(dm.GetILGenerator(), delType, returnType, Ux, returnFlag, paramFlags, invoke, is_action, is_reffunc);
                 return dm;
             }
             catch (Exception)
@@ -3317,7 +3672,7 @@ namespace Mod.LowLevel
                 var mb = type.DefineMethod("DynamicInvoke",
                     System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
                     returnType.MakeByRefType(), paramTypes);
-                EmitBody(mb.GetILGenerator(), delType, returnType, Ux, returnFlag, paramFlags, invoke, is_action);
+                EmitBody(mb.GetILGenerator(), delType, returnType, Ux, returnFlag, paramFlags, invoke, is_action, is_reffunc);
                 return CreateBuilderType(type).GetMethod("DynamicInvoke");
             }
         }
@@ -3357,7 +3712,7 @@ namespace Mod.LowLevel
         }
 
         static void EmitBody(System.Reflection.Emit.ILGenerator il, Type delType, Type returnType, Type[] Ux,
-            int returnFlag, uint paramFlags, System.Reflection.MethodInfo invoke, bool is_action)
+            int returnFlag, uint paramFlags, System.Reflection.MethodInfo invoke, bool is_action, bool is_reffunc)
         {
             // Receiver first: (delType)del.
             il.Emit(OpCodes.Ldarg, 0);
@@ -3371,6 +3726,7 @@ namespace Mod.LowLevel
             // ByRef → the delegate receives the ADDRESS of the slot
             //         (conv.u + ConvertParam<IntPtr, Ux> bit-reinterpretation);
             // ByValue → ldobj Ux (the slot's contents).
+            var pinned = new List<System.Reflection.Emit.LocalBuilder>();
             for (int i = 0; i < Ux.Length; i++)
             {
                 if (Ux[i] == typeof(ByRefLocalSlot))
@@ -3383,9 +3739,16 @@ namespace Mod.LowLevel
                 }
                 else if (FreeInvokableBase.GetRefParamFlag(paramFlags, i))
                 {
+                    // fixed Ux* pux = &px - the pinned local pins the byref target for the
+                    // whole delegate-call window (same fix as the woven InvokeFallback).
+                    var pux = il.DeclareLocal(Ux[i].MakeByRefType(), true);
                     il.Emit(OpCodes.Ldarg, 2 + i);
+                    il.Emit(OpCodes.Stloc, pux);
+                    il.Emit(OpCodes.Ldloc, pux);
                     il.Emit(OpCodes.Conv_U);
+                    il.Emit(OpCodes.Call, s_intPtrOpExplicit);
                     il.Emit(OpCodes.Call, s_convertParam1.MakeGenericMethod(typeof(IntPtr), Ux[i]));
+                    pinned.Add(pux);
                 }
                 else
                 {
@@ -3395,9 +3758,59 @@ namespace Mod.LowLevel
             }
 
             il.Emit(OpCodes.Callvirt, invoke);
-            // Stack: [R] (Func) or [] (Action).
+            // Stack: [R] (Func) or [R&] (RefFunc) or [] (Action).
+            // Release the pins: the wrapper has returned, so every ux._Address snapshot
+            // has been consumed. The stloc also keeps each pinned local's liveness
+            // covering the callvirt safepoint above.
+            for (int i = 0; i < pinned.Count; i++)
+            {
+                il.Emit(OpCodes.Ldc_I4_0);
+                il.Emit(OpCodes.Conv_U);
+                il.Emit(OpCodes.Stloc, pinned[i]);
+            }
 
-            if (is_action || returnFlag == 0)
+            if (is_reffunc)
+            {
+                // RefFunc branch: callvirt returned a BYREF (R&) — it stays on the eval
+                // stack, GC-tracked. Store it in an R& local (tracked) and massage per flag.
+                var tmpR = il.DeclareLocal(returnType.MakeByRefType());
+                il.Emit(OpCodes.Stloc, tmpR);
+                if (returnFlag == 0)
+                {
+                    // VoidReturn: discard the byref (stloc already consumed it).
+                    // r = default; return ref r;
+                    il.Emit(OpCodes.Ldarg, 1);
+                    il.Emit(OpCodes.Initobj, returnType);
+                    il.Emit(OpCodes.Ldarg, 1);
+                    il.Emit(OpCodes.Ret);
+                }
+                else if (returnFlag == 2)
+                {
+                    // ByRefParam: out r gets the snapshot copy of the byref's target
+                    // address (r = ConvertRef<R, IntPtr>(r) = ConvertRefToAddress(in callresult));
+                    // the ORIGINAL stack byref is returned directly — no IntPtr transit.
+                    il.Emit(OpCodes.Ldarg, 1);
+                    il.Emit(OpCodes.Initobj, returnType);        // r = default
+                    il.Emit(OpCodes.Ldarg, 1);
+                    il.Emit(OpCodes.Ldloc, tmpR);
+                    il.Emit(OpCodes.Conv_U);                     // target address (native int)
+                    il.Emit(OpCodes.Call, s_convertParam1.MakeGenericMethod(typeof(IntPtr), returnType));
+                    il.Emit(OpCodes.Stobj, returnType);           // r = ByRefParam{_Address = target}
+                    il.Emit(OpCodes.Ldloc, tmpR);                // the ORIGINAL byref (tracked)
+                    il.Emit(OpCodes.Ret);
+                }
+                else
+                {
+                    // Other: deref the byref into out r; return ref r.
+                    il.Emit(OpCodes.Ldarg, 1);
+                    il.Emit(OpCodes.Ldloc, tmpR);
+                    il.Emit(OpCodes.Ldobj, returnType);          // r = *callresult
+                    il.Emit(OpCodes.Stobj, returnType);
+                    il.Emit(OpCodes.Ldarg, 1);
+                    il.Emit(OpCodes.Ret);
+                }
+            }
+            else if (is_action || returnFlag == 0)
             {
                 // Nothing usable from the call: Action leaves nothing (returnFlag 1/2 →
                 // fabricate a default R / ref R), Func + returnFlag 0 → discard the result.
@@ -3437,9 +3850,9 @@ namespace Mod.LowLevel
             }
         }
     }
-    public class FreeFunc<R> : FreeInvokable<R>
+    public sealed class FreeFunc<R> : FreeInvokable<R>, IPlainInvokableFunc<R>, IFreeInvokableFunc<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<R> del)
         {
             _Del = del;
@@ -3448,7 +3861,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke()
+        public FreeFunc(RefFunc<R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke()
         {
             if (_Del is Func<R> func)
             {
@@ -3458,17 +3875,43 @@ namespace Mod.LowLevel
             {
                 act();
             }
+            else if (_Del is RefFunc<R> rfunc)
+            {
+                return rfunc();
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke(out R r)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action → null ref; Func → callresult bits as an address;
+        // RefFunc → the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn()
+        {
+            if (_Del is RefFunc<R> rfunc)
+            {
+                return ref rfunc();
+            }
+            else if (_Del is Func<R> func)
+            {
+                var callresult = func();
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action
+            {
+                ((Action)_Del)();
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke(out R r)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<R>)
                 emitkey |= 1UL << 34;
+            if (_Del is RefFunc<R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -3493,16 +3936,18 @@ namespace Mod.LowLevel
                 return ref del(_Del, out r);
             }
         }
-        protected ref R InvokeFallback(out R r)
+        private ref R InvokeFallback(out R r)
         {
-            var fallback = Invoke();
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn();
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke();
                 return ref r;
             }
         }
@@ -3511,9 +3956,9 @@ namespace Mod.LowLevel
             return MemberwiseClone() as FreeFunc<R>;
         }
     }
-    public class FreeFunc<R, U1> : FreeInvokable<R, U1>
+    public sealed class FreeFunc<R, U1> : FreeInvokable<R, U1>, IPlainInvokableFunc<R, U1>, IFreeInvokableFunc1<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, R> del)
         {
             _Del = del;
@@ -3522,7 +3967,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1)
+        public FreeFunc(RefFunc<U1, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1)
         {
             if (_Del is Func<U1, R> func)
             {
@@ -3532,17 +3981,44 @@ namespace Mod.LowLevel
             {
                 act(p1);
             }
+            else if (_Del is RefFunc<U1, R> rfunc)
+            {
+                return rfunc(p1);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1>(out R r, in P1 p1)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action → null ref; Func → callresult bits as an address;
+        // RefFunc → the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1)
+        {
+            if (_Del is RefFunc<U1, R> rfunc)
+            {
+                return ref rfunc(u1);
+            }
+            else if (_Del is Func<U1, R> func)
+            {
+                var callresult = func(u1);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1>
+            {
+                ((Action<U1>)_Del)(u1);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1>(out R r, in P1 p1)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, R>)
+                emitkey |= 1UL << 35;
+            if (_Del is RefFunc<U1, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -3571,28 +4047,43 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
-            var fallback = Invoke(u1);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1);
                 return ref r;
             }
         }
+        public R Invoke<P1>(in P1 p1)
+        {
+            return Invoke(out var r, in p1);
+        }
+
         public FreeFunc<R, U1> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1>;
         }
     }
-    public class FreeFunc<R, U1, U2> : FreeInvokable<R, U1, U2>
+    public sealed class FreeFunc<R, U1, U2> : FreeInvokable<R, U1, U2>, IPlainInvokableFunc<R, U1, U2>, IFreeInvokableFunc2<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, R> del)
         {
             _Del = del;
@@ -3601,7 +4092,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2)
+        public FreeFunc(RefFunc<U1, U2, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2)
         {
             if (_Del is Func<U1, U2, R> func)
             {
@@ -3611,17 +4106,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2);
             }
+            else if (_Del is RefFunc<U1, U2, R> rfunc)
+            {
+                return rfunc(p1, p2);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2>(out R r, in P1 p1, in P2 p2)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2)
+        {
+            if (_Del is RefFunc<U1, U2, R> rfunc)
+            {
+                return ref rfunc(u1, u2);
+            }
+            else if (_Del is Func<U1, U2, R> func)
+            {
+                var callresult = func(u1, u2);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2>
+            {
+                ((Action<U1, U2>)_Del)(u1, u2);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2>(out R r, in P1 p1, in P2 p2)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -3652,29 +4172,43 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
-            var fallback = Invoke(u1, u2);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2>(in P1 p1, in P2 p2)
+        {
+            return Invoke(out var r, in p1, in p2);
         }
         public FreeFunc<R, U1, U2> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3> : FreeInvokable<R, U1, U2, U3>
+    public sealed class FreeFunc<R, U1, U2, U3> : FreeInvokable<R, U1, U2, U3>, IPlainInvokableFunc<R, U1, U2, U3>, IFreeInvokableFunc3<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, R> del)
         {
             _Del = del;
@@ -3683,7 +4217,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3)
+        public FreeFunc(RefFunc<U1, U2, U3, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3)
         {
             if (_Del is Func<U1, U2, U3, R> func)
             {
@@ -3693,17 +4231,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3);
             }
+            else if (_Del is RefFunc<U1, U2, U3, R> rfunc)
+            {
+                return rfunc(p1, p2, p3);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3>(out R r, in P1 p1, in P2 p2, in P3 p3)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3)
+        {
+            if (_Del is RefFunc<U1, U2, U3, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3);
+            }
+            else if (_Del is Func<U1, U2, U3, R> func)
+            {
+                var callresult = func(u1, u2, u3);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3>
+            {
+                ((Action<U1, U2, U3>)_Del)(u1, u2, u3);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3>(out R r, in P1 p1, in P2 p2, in P3 p3)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -3736,30 +4299,44 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
             var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
-            var fallback = Invoke(u1, u2, u3);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3>(in P1 p1, in P2 p2, in P3 p3)
+        {
+            return Invoke(out var r, in p1, in p2, in p3);
         }
         public FreeFunc<R, U1, U2, U3> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4> : FreeInvokable<R, U1, U2, U3, U4>
+    public sealed class FreeFunc<R, U1, U2, U3, U4> : FreeInvokable<R, U1, U2, U3, U4>, IPlainInvokableFunc<R, U1, U2, U3, U4>, IFreeInvokableFunc4<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, R> del)
         {
             _Del = del;
@@ -3768,7 +4345,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4)
         {
             if (_Del is Func<U1, U2, U3, U4, R> func)
             {
@@ -3778,17 +4359,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4>
+            {
+                ((Action<U1, U2, U3, U4>)_Del)(u1, u2, u3, u4);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -3823,31 +4429,45 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
             var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
             var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
-            var fallback = Invoke(u1, u2, u3, u4);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4>(in P1 p1, in P2 p2, in P3 p3, in P4 p4)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4);
         }
         public FreeFunc<R, U1, U2, U3, U4> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5> : FreeInvokable<R, U1, U2, U3, U4, U5>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5> : FreeInvokable<R, U1, U2, U3, U4, U5>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5>, IFreeInvokableFunc5<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, R> del)
         {
             _Del = del;
@@ -3856,7 +4476,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, R> func)
             {
@@ -3866,17 +4490,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5>
+            {
+                ((Action<U1, U2, U3, U4, U5>)_Del)(u1, u2, u3, u4, u5);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -3913,32 +4562,46 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
             var u3 = ConvertParam<U3, U3>(in p3, GetRefParamFlag(2));
             var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
             var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
-            var fallback = Invoke(u1, u2, u3, u4, u5);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6> : FreeInvokable<R, U1, U2, U3, U4, U5, U6>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6> : FreeInvokable<R, U1, U2, U3, U4, U5, U6>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6>, IFreeInvokableFunc6<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, R> del)
         {
             _Del = del;
@@ -3947,7 +4610,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, R> func)
             {
@@ -3957,17 +4624,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6>)_Del)(u1, u2, u3, u4, u5, u6);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -4006,7 +4698,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -4014,25 +4714,31 @@ namespace Mod.LowLevel
             var u4 = ConvertParam<U4, U4>(in p4, GetRefParamFlag(3));
             var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
             var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5, U6>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7>, IFreeInvokableFunc7<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, R> del)
         {
             _Del = del;
@@ -4041,7 +4747,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, U7, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, R> func)
             {
@@ -4051,17 +4761,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6, p7);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6, p7);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6, u7);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6, u7);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6, U7>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6, U7>)_Del)(u1, u2, u3, u4, u5, u6, u7);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -4102,7 +4837,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -4111,25 +4854,31 @@ namespace Mod.LowLevel
             var u5 = ConvertParam<U5, U5>(in p5, GetRefParamFlag(4));
             var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
             var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5, U6, U7>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>, IFreeInvokableFunc8<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, R> del)
         {
             _Del = del;
@@ -4138,7 +4887,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, R> func)
             {
@@ -4148,17 +4901,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6, p7, p8);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6, p7, p8);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6, u7, u8);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6, u7, u8);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6, U7, U8>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6, U7, U8>)_Del)(u1, u2, u3, u4, u5, u6, u7, u8);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -4201,7 +4979,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -4211,25 +4997,31 @@ namespace Mod.LowLevel
             var u6 = ConvertParam<U6, U6>(in p6, GetRefParamFlag(5));
             var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
             var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>, IFreeInvokableFunc9<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> del)
         {
             _Del = del;
@@ -4238,7 +5030,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> func)
             {
@@ -4248,17 +5044,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6, p7, p8, p9);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6, p7, p8, p9);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6, u7, u8, u9);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6, u7, u8, u9);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6, U7, U8, U9>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6, U7, U8, U9>)_Del)(u1, u2, u3, u4, u5, u6, u7, u8, u9);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -4303,7 +5124,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -4314,25 +5143,31 @@ namespace Mod.LowLevel
             var u7 = ConvertParam<U7, U7>(in p7, GetRefParamFlag(6));
             var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
             var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>, IFreeInvokableFunc10<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> del)
         {
             _Del = del;
@@ -4341,7 +5176,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> func)
             {
@@ -4351,17 +5190,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>)_Del)(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -4408,7 +5272,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -4420,25 +5292,31 @@ namespace Mod.LowLevel
             var u8 = ConvertParam<U8, U8>(in p8, GetRefParamFlag(7));
             var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
             var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>, IFreeInvokableFunc11<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> del)
         {
             _Del = del;
@@ -4447,7 +5325,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> func)
             {
@@ -4457,17 +5339,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>)_Del)(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -4516,7 +5423,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -4529,25 +5444,31 @@ namespace Mod.LowLevel
             var u9 = ConvertParam<U9, U9>(in p9, GetRefParamFlag(8));
             var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
             var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>, IFreeInvokableFunc12<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> del)
         {
             _Del = del;
@@ -4556,7 +5477,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> func)
             {
@@ -4566,17 +5491,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>)_Del)(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -4627,7 +5577,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -4641,25 +5599,31 @@ namespace Mod.LowLevel
             var u10 = ConvertParam<U10, U10>(in p10, GetRefParamFlag(9));
             var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
             var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>, IFreeInvokableFunc13<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> del)
         {
             _Del = del;
@@ -4668,7 +5632,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> func)
             {
@@ -4678,17 +5646,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>)_Del)(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -4741,7 +5734,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -4756,25 +5757,31 @@ namespace Mod.LowLevel
             var u11 = ConvertParam<U11, U11>(in p11, GetRefParamFlag(10));
             var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
             var u13 = ConvertParam<U13, U13>(in p13, GetRefParamFlag(12));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>, IFreeInvokableFunc14<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> del)
         {
             _Del = del;
@@ -4783,7 +5790,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> func)
             {
@@ -4793,17 +5804,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13, U14 u14)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>)_Del)(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -4858,7 +5894,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -4874,25 +5918,31 @@ namespace Mod.LowLevel
             var u12 = ConvertParam<U12, U12>(in p12, GetRefParamFlag(11));
             var u13 = ConvertParam<U13, U13>(in p13, GetRefParamFlag(12));
             var u14 = ConvertParam<U14, U14>(in p14, GetRefParamFlag(13));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13, in p14);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>, IFreeInvokableFunc15<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> del)
         {
             _Del = del;
@@ -4901,7 +5951,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> func)
             {
@@ -4911,17 +5965,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14, in U15 u15);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13, U14 u14, U15 u15)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>)_Del)(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14, in U15 u15);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -4978,7 +6057,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -4995,25 +6082,31 @@ namespace Mod.LowLevel
             var u13 = ConvertParam<U13, U13>(in p13, GetRefParamFlag(12));
             var u14 = ConvertParam<U14, U14>(in p14, GetRefParamFlag(13));
             var u15 = ConvertParam<U15, U15>(in p15, GetRefParamFlag(14));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13, in p14, in p15);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15> Clone()
         {
             return MemberwiseClone() as FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15>;
         }
     }
-    public class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>
+    public sealed class FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> : FreeInvokable<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>, IPlainInvokableFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>, IFreeInvokableFunc16<R>
     {
-        protected Delegate _Del;
+        private Delegate _Del;
         public FreeFunc(Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> del)
         {
             _Del = del;
@@ -5022,7 +6115,11 @@ namespace Mod.LowLevel
         {
             _Del = del;
         }
-        public override R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
+        public FreeFunc(RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> del)
+        {
+            _Del = del;
+        }
+        public R Invoke(U1 p1, U2 p2, U3 p3, U4 p4, U5 p5, U6 p6, U7 p7, U8 p8, U9 p9, U10 p10, U11 p11, U12 p12, U13 p13, U14 p14, U15 p15, U16 p16)
         {
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> func)
             {
@@ -5032,17 +6129,42 @@ namespace Mod.LowLevel
             {
                 act(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16);
             }
+            else if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> rfunc)
+            {
+                return rfunc(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16);
+            }
             return default;
         }
-        protected delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14, in U15 u15, in U16 u16);
-        protected static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
-        public override ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16)
+        // Ref-return path for InvokeFallback (_ReturnCategory == 2): branches on the
+        // delegate kind. Action -> null ref; Func -> callresult bits as an address;
+        // RefFunc -> the byref returned by the delegate passes straight through.
+        private ref R InvokeRefReturn(U1 u1, U2 u2, U3 u3, U4 u4, U5 u5, U6 u6, U7 u7, U8 u8, U9 u9, U10 u10, U11 u11, U12 u12, U13 u13, U14 u14, U15 u15, U16 u16)
+        {
+            if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> rfunc)
+            {
+                return ref rfunc(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16);
+            }
+            else if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R> func)
+            {
+                var callresult = func(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16);
+                return ref ConvertAddressToRef(callresult);
+            }
+            else // Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>
+            {
+                ((Action<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16>)_Del)(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16);
+                return ref ConvertAddressToRef<R>(IntPtr.Zero);
+            }
+        }
+        private delegate ref R DynamicInvoker(Delegate del, out R r, in U1 u1, in U2 u2, in U3 u3, in U4 u4, in U5 u5, in U6 u6, in U7 u7, in U8 u8, in U9 u9, in U10 u10, in U11 u11, in U12 u12, in U13 u13, in U14 u14, in U15 u15, in U16 u16);
+        private static ConcurrentDictionary<ulong, DynamicInvoker> _EmitCache = new ConcurrentDictionary<ulong, DynamicInvoker>();
+        public ref R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(out R r, in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16)
         {
             var emitkey = (ulong)_ReturnCategory;
             emitkey <<= 32;
             emitkey |= _RefParamFlags;
             if (_Del is Func<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R>)
-                emitkey |= 1UL << 34;
+                emitkey |= 1UL << 34; if (_Del is RefFunc<U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, R>)
+                emitkey |= 1UL << 35;
             DynamicInvoker del = null;
             if (!_IsDynamicCodeDisabled && !_EmitCache.TryGetValue(emitkey, out del))
             {
@@ -5101,7 +6223,15 @@ namespace Mod.LowLevel
                     );
             }
         }
-        protected ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15, in U16 p16)
+        /// <summary>
+        /// The body of this method is REPLACED at build time by the Generator
+        /// (Projects/Generator - Mono.Cecil static weaving, RebuildInvokeFallbackBody).
+        /// The C# code below is never executed; it only demonstrates the intended
+        /// semantics of the woven IL: a typeof-keyed three-branch parameter conversion
+        /// (ByRefParam - pinned byref + address snapshot; ByRefLocalSlot - parameter-slot
+        /// indirect; otherwise - value copy), the _ReturnCategory branch, and the pin
+        /// release before every ret. Keep it in sync with the Generator for readability.
+        private ref R InvokeFallback(out R r, in U1 p1, in U2 p2, in U3 p3, in U4 p4, in U5 p5, in U6 p6, in U7 p7, in U8 p8, in U9 p9, in U10 p10, in U11 p11, in U12 p12, in U13 p13, in U14 p14, in U15 p15, in U16 p16)
         {
             var u1 = ConvertParam<U1, U1>(in p1, GetRefParamFlag(0));
             var u2 = ConvertParam<U2, U2>(in p2, GetRefParamFlag(1));
@@ -5119,16 +6249,22 @@ namespace Mod.LowLevel
             var u14 = ConvertParam<U14, U14>(in p14, GetRefParamFlag(13));
             var u15 = ConvertParam<U15, U15>(in p15, GetRefParamFlag(14));
             var u16 = ConvertParam<U16, U16>(in p16, GetRefParamFlag(15));
-            var fallback = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16);
-            r = fallback;
             if (_ReturnCategory == 2)
             {
-                return ref ConvertAddressToRef(fallback);
+                ref R result = ref InvokeRefReturn(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16);
+                r = default;
+                ConvertRef<R, IntPtr>(in r) = ConvertRefToAddress(in result);
+                return ref result;
             }
             else
             {
+                r = Invoke(u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16);
                 return ref r;
             }
+        }
+        public R Invoke<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16>(in P1 p1, in P2 p2, in P3 p3, in P4 p4, in P5 p5, in P6 p6, in P7 p7, in P8 p8, in P9 p9, in P10 p10, in P11 p11, in P12 p12, in P13 p13, in P14 p14, in P15 p15, in P16 p16)
+        {
+            return Invoke(out var r, in p1, in p2, in p3, in p4, in p5, in p6, in p7, in p8, in p9, in p10, in p11, in p12, in p13, in p14, in p15, in p16);
         }
         public FreeFunc<R, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16> Clone()
         {
