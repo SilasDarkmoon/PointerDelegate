@@ -2,16 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-// netstandard2.0 polyfill for the .NET 7+ UnscopedRefAttribute: the woven
-// InvokeFallback bodies return refs into the caller's frame (the out r slot /
-// the InvokeRefReturn byref), so the C#-level throw placeholders must declare
-// the calling-method escape scope the real IL provides.
-namespace System.Diagnostics.CodeAnalysis
-{
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Parameter, Inherited = false)]
-    internal sealed class UnscopedRefAttribute : Attribute { }
-}
-
 namespace Mod.LowLevel
 {
     public enum ParamFlag
