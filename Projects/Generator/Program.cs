@@ -190,7 +190,9 @@ namespace Generator
             var module = asm.MainModule;
 
             var baseType = module.GetType("Mod.LowLevel.FreeInvokableBase");
-            var retcField = baseType.GetField("_ReturnCategory");
+            // _ReturnCategory/_ParamFlags are now STATIC fields on the per-arity
+            // FreeInvokable`n+1 base classes (no longer instance fields on
+            // FreeInvokableBase) — resolve them per type via GetStaticFieldRef.
 
             // Bisect switch for ILC debugging: all | pf | prim | lref | none | unmonly.
             var mode = Environment.GetEnvironmentVariable("PD_INJ_MODE") ?? "all";
@@ -212,7 +214,7 @@ namespace Generator
 
                 if (category == DelegateCategory.Pointer)
                 {
-                    foreach (var method in type.Methods)
+                    foreach (var method in type.Methods.ToArray())
                     {
                         // The non-generic Invoke is now a plain-C# trampoline (runtime-Emit
                         // PlainInvoker first, InvokePlain fallback). InvokePlain — plain R
@@ -220,7 +222,7 @@ namespace Generator
                         if (method.Name == "InvokePlain")
                         {
 
-                            InjectPointerFuncNonGenericInvoke(method, type, retcField, module, unmonly);
+                            InjectPointerFuncNonGenericInvoke(method, type, module, unmonly);
                             RemoveNop(method);
                         }
                         // InvokeRefReturn — ref R return, managed calli with a ref-R
@@ -290,7 +292,19 @@ namespace Generator
                 }
             }
 
+            // RefInvoker core-Invoke rebuild (ActionRefInvoker/FuncRefInvoker/
+            // RefFuncRefInvoker — slot-indirect wrappers over a typed delegate
+            // field). Completely separate from the PointerFunc/FreeFunc passes:
+            // this pass's type filter matches only the three RefInvoker family
+            // names, and none of the other passes' filters (PointerFunc* /
+            // FreeFunc* prefixes) ever match them.
+            if (mode == "all" || mode == "refinvoker")
+            {
+                InjectRefInvokerBodies(asm);
+            }
+
             EmitRefSafetyRulesAttribute(asm);
+            EmitUnscopedRefOnRefReturningMethods(asm);
             EmitScopedRefOnInParameters(asm);
 
             asm.Write(tar);
@@ -312,6 +326,45 @@ namespace Generator
             var scope = module.TypeSystem.Object.Scope;
             return new TypeReference("System", name, module, scope);
         }
+        /// <summary>
+        /// Resolves a STATIC field (_ReturnCategory / _ParamFlags) that now lives on the
+        /// per-arity FreeInvokable`n+1 base class. type.BaseType is the generic
+        /// instantiation FreeInvokable&lt;!R, !U1..!Un&gt; — its generic arguments ARE the
+        /// declaring type's own generic parameters — so a FieldReference over it is the
+        /// correct open-generic static field reference (the exact shape Roslyn emits
+        /// for base-class static field access from a generic derived class).
+        /// </summary>
+        static FieldReference GetStaticFieldRef(TypeDefinition type, string name)
+        {
+            var baseDef = type.BaseType.Resolve();
+            var fd = baseDef.GetField(name);
+            if (fd == null) return null;
+            return new FieldReference(fd.Name, fd.FieldType, type.BaseType);
+        }
+
+        /// <summary>
+        /// Resolves a static accessor method (GetReturnCategory() / GetParamFlag(int))
+        /// on the per-arity FreeInvokable`n+1 base class, referenced through the
+        /// declaring type's own generic instantiation of that base. The woven IL
+        /// uses the cached flags through these accessors without Type comparisons.
+        /// </summary>
+        static MethodReference GetStaticMethodRef(TypeDefinition type, string name, int paramCount)
+        {
+            var baseDef = type.BaseType.Resolve();
+            MethodDefinition md = null;
+            foreach (var m in baseDef.Methods)
+            {
+                if (m.Name == name && !m.HasGenericParameters
+                    && m.Parameters.Count == paramCount && m.IsStatic)
+                {
+                    md = m;
+                    break;
+                }
+            }
+            if (md == null) return null;
+            return md.GetReference((GenericInstanceType)type.BaseType);
+        }
+
         static MethodReference GetSystemCtor(ModuleDefinition module, TypeReference type, params TypeReference[] pars)
         {
             var ctor = new MethodReference(".ctor", module.TypeSystem.Void, type) { HasThis = true };
@@ -333,6 +386,72 @@ namespace Generator
         /// (the exact shape C# emits for `in`), so parameters are matched by the
         /// '&' suffix in their type name instead.
         /// </summary>
+        /// <summary>
+        /// Injects [UnscopedRef] on every STATIC ref-returning method of Mod.LowLevel
+        /// (the woven InvokeFallback placeholders, the generic Invoke family,
+        /// InvokeRefReturn, ConvertRef/ConvertAddressToRef bridges, ...). The woven
+        /// IL returns refs that escape to the caller's frame (the out r slot, the
+        /// delegate byref), but the C#-level throw placeholders have no return-ref
+        /// flow for Roslyn to infer the escape scope from, so consumers get
+        /// CS8347/CS8156 ("result may expose variables referred to by r").
+        /// UnscopedRefAttribute declares the calling-method escape scope the real
+        /// IL provides. The attribute type is a shim (ns2.0 lacks it); Roslyn
+        /// recognizes these compiler-reserved attributes by full name alone.
+        /// Idempotent: skips methods that already carry it.
+        ///
+        /// Static-only is deliberate and matches ByRefUtils' Generator: under
+        /// rules-11 [UnscopedRef] pulls all ref-like arguments INCLUDING the
+        /// receiver back into the result's escape-min. This assembly's ref-
+        /// returning surface is all static, so behavior is unchanged today, but
+        /// the guard keeps any future struct-instance ref-returning member
+        /// (non-readonly this) from being silently TIGHTENED by the attribute.
+        /// </summary>
+        static void EmitUnscopedRefOnRefReturningMethods(AssemblyDefinition asm)
+        {
+            const string ns = "System.Diagnostics.CodeAnalysis";
+            var module = asm.MainModule;
+
+            // UnscopedRefAttribute shim (ns2.0 lacks it)
+            var shim = module.GetType($"{ns}.UnscopedRefAttribute");
+            if (shim == null)
+            {
+                shim = new TypeDefinition(ns, "UnscopedRefAttribute",
+                    TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
+                    GetSystemType(module, "Attribute"));
+
+                // NOTE: no [AttributeUsage] on the shim - see the note in
+                // EmitScopedRefOnInParameters for why (MemberRef resolution).
+
+                var ctor = new MethodDefinition(".ctor",
+                    MethodAttributes.Public | MethodAttributes.HideBySig |
+                    MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                    module.TypeSystem.Void);
+                var baseCtor = GetSystemCtor(module, GetSystemType(module, "Attribute"));
+                var il = ctor.Body.GetILProcessor();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Call, baseCtor);
+                il.Emit(OpCodes.Ret);
+                shim.Methods.Add(ctor);
+                module.Types.Add(shim);
+            }
+            var shimCtor = shim.GetMethod(".ctor");
+
+            int annotated = 0;
+            foreach (var type in module.Types)
+            {
+                if (type.Namespace != "Mod.LowLevel") continue;
+                foreach (var method in type.Methods)
+                {
+                    if (!method.ReturnType.IsByReference) continue;      // ref-returning methods
+                    if (!method.IsStatic) continue;                      // see doc: receiver must stay out of escape-min
+                    if (method.CustomAttributes.Any(a => a.AttributeType.FullName == $"{ns}.UnscopedRefAttribute")) continue;
+                    method.CustomAttributes.Add(new CustomAttribute(shimCtor));
+                    annotated++;
+                }
+            }
+            Console.WriteLine($"[UnscopedRef] annotated {annotated} ref-returning methods");
+        }
+
         static void EmitScopedRefOnInParameters(AssemblyDefinition asm)
         {
             const string ns = "System.Runtime.CompilerServices";
@@ -520,10 +639,12 @@ namespace Generator
             return result;
         }
 
-        static void InjectPointerFuncNonGenericInvoke(MethodDefinition method, TypeDefinition type, FieldDefinition retcField, ModuleDefinition module, bool unmanagedOnly)
+        static void InjectPointerFuncNonGenericInvoke(MethodDefinition method, TypeDefinition type, ModuleDefinition module, bool unmanagedOnly)
         {
             var pfnField = type.GetField("_Pfn");
             var unmanagedField = type.GetField("_IsUnmanaged");
+            // The caller supplies the cached return-category flag.
+            var retcParam = method.Parameters[method.Parameters.Count - 1];
 
             method.Body.Instructions.Clear();
             method.Body.Variables.Clear();
@@ -534,11 +655,35 @@ namespace Generator
             VariableDefinition retValLocal = new VariableDefinition(returnType);
             method.Body.Variables.Add(retValLocal);
 
-            var unmanagedLabel = emitter.Create(OpCodes.Nop);
             var callvoidfnLabel = emitter.Create(OpCodes.Nop);
             var callvoidfnLabelU = emitter.Create(OpCodes.Nop);
 
-            for (int i = 0; i < method.Parameters.Count; i++)
+            if (!unmanagedOnly)
+            {
+                // Keep unmanaged generic calli signatures out of the managed body.
+                // Desktop CLR resolves their native sizes even on untaken branches.
+                var unmanagedMethod = new MethodDefinition("InvokePlainUnmanaged",
+                    Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.HideBySig,
+                    method.ReturnType);
+                unmanagedMethod.ImplAttributes = Mono.Cecil.MethodImplAttributes.NoInlining;
+                foreach (var parameter in method.Parameters)
+                    unmanagedMethod.Parameters.Add(new ParameterDefinition(parameter.Name, parameter.Attributes, parameter.ParameterType));
+                type.Methods.Add(unmanagedMethod);
+                InjectPointerFuncNonGenericInvoke(unmanagedMethod, type, module, true);
+                var self = new GenericInstanceType(type);
+                foreach (var parameter in type.GenericParameters) self.GenericArguments.Add(parameter);
+                var managedStart = emitter.Create(OpCodes.Nop);
+                emitter.Emit(OpCodes.Ldarg_0);
+                emitter.Emit(OpCodes.Ldfld, new FieldReference(unmanagedField.Name, unmanagedField.FieldType, self));
+                emitter.Emit(OpCodes.Brfalse, managedStart);
+                emitter.Emit(OpCodes.Ldarg_0);
+                foreach (var parameter in method.Parameters) emitter.Emit(OpCodes.Ldarg, parameter);
+                emitter.Emit(OpCodes.Call, unmanagedMethod.GetReference(self));
+                emitter.Emit(OpCodes.Ret);
+                emitter.Append(managedStart);
+            }
+
+            for (int i = 0; i < method.Parameters.Count - 1; i++)   // exclude trailing retc
             {
                 emitter.Emit(OpCodes.Ldarg, method.Parameters[i]);
             }
@@ -556,19 +701,11 @@ namespace Generator
             var pfnRef = new FieldReference(pfnField.Name, pfnField.FieldType, openSelf);
             emitter.Emit(OpCodes.Ldfld, pfnRef);
 
-            // Runtime branch on _IsUnmanaged: true → unmanaged calli (0x09, same as
-            // delegate* unmanaged), false → managed calli (0x00). brtrue pops the
-            // bool; the [params, pfn] stack below is shared by both paths.
-            var unmanagedRef = new FieldReference(unmanagedField.Name, unmanagedField.FieldType, openSelf);
             if (!unmanagedOnly)
             {
-            emitter.Emit(OpCodes.Ldarg_0);
-            emitter.Emit(OpCodes.Ldfld, unmanagedRef);
-            emitter.Emit(OpCodes.Brtrue, unmanagedLabel);
 
             // === managed path ===
-            emitter.Emit(OpCodes.Ldarg_0);
-            emitter.Emit(OpCodes.Ldfld, retcField);
+            emitter.Emit(OpCodes.Ldarg, retcParam);
             emitter.Emit(OpCodes.Brfalse, callvoidfnLabel);
 
             var callSite = new CallSite(returnType);
@@ -592,12 +729,11 @@ namespace Generator
             emitter.Emit(OpCodes.Initobj, returnType);
             emitter.Emit(OpCodes.Ldloc, retValLocal);
             emitter.Emit(OpCodes.Ret);
-            emitter.Append(unmanagedLabel);
+            return;
             }
 
             // === unmanaged path (the only path in unmonly mode) ===
-            emitter.Emit(OpCodes.Ldarg_0);
-            emitter.Emit(OpCodes.Ldfld, retcField);
+            emitter.Emit(OpCodes.Ldarg, retcParam);
             emitter.Emit(OpCodes.Brfalse, callvoidfnLabelU);
 
             var callSiteU = new CallSite(returnType);
@@ -725,14 +861,17 @@ namespace Generator
             var convertParam = baseType.Methods.Single(m =>
                 m.Name == "ConvertParam" && m.GenericParameters.Count == 2
                 && m.Parameters.Count == 1);
-            var byRefParamType = module.GetType("Mod.LowLevel.ByRefParam");
-            var byRefLocalSlotType = module.GetType("Mod.LowLevel.ByRefLocalSlot");
-            var retcField = baseType.GetField("_ReturnCategory");
+            // GetRefParamFlag(ulong flags, int paramIndex) — the static flag decoder on
+            // FreeInvokableBase; the woven branches key on its ParamFlag result instead
+            // of typeof comparisons.
+            var getRefParamFlag = baseType.Methods.Single(m =>
+                m.Name == "GetRefParamFlag" && m.Parameters.Count == 2).GetReference();
 
-            var getTypeFromHandle = module.ImportReference(
-                typeof(Type).GetMethod("GetTypeFromHandle", new Type[] { typeof(RuntimeTypeHandle) }));
-            var typeOpEquality = module.ImportReference(
-                typeof(Type).GetMethod("op_Equality", new Type[] { typeof(Type), typeof(Type) }));
+            // NOTE: never ImportReference(typeof(...)) from the net10 Generator here —
+            // Cecil 0.10 flushes every imported reference into the output module, which
+            // adds an extern System.Private.CoreLib that net48 cannot load
+            // (BadImageFormatException / FileNotFoundException at JIT time).
+
             // Cecil 0.10 maps System.IntPtr to ELEMENT_TYPE_I (native int) both via
             // TypeSystem.IntPtr and ImportReference(typeof(IntPtr)) — and native int is
             // NOT a legal generic argument. Reuse the C#-compiler-written IntPtr
@@ -777,8 +916,7 @@ namespace Generator
                     if (method.Name != "InvokeFallback") continue;
                     if (!method.HasBody || method.Parameters.Count < 2) continue;
                     if (RebuildInvokeFallbackBody(method, type, module, convertParam,
-                        byRefParamType, byRefLocalSlotType, retcField,
-                        getTypeFromHandle, typeOpEquality, intPtrType, intPtrOpExplicit)) patched++;
+                        getRefParamFlag, intPtrType, intPtrOpExplicit)) patched++;
                     else skipped++;
                 }
             }
@@ -786,8 +924,7 @@ namespace Generator
         }
 
         static bool RebuildInvokeFallbackBody(MethodDefinition method, TypeDefinition type, ModuleDefinition module,
-            MethodReference convertParam, TypeReference byRefParamType, TypeReference byRefLocalSlotType,
-            FieldReference retcField, MethodReference getTypeFromHandle, MethodReference typeOpEquality,
+            MethodReference convertParam, MethodReference getRefParamFlag,
             TypeReference intPtrType, MethodReference intPtrOpExplicit)
         {
             var body = method.Body;
@@ -818,6 +955,11 @@ namespace Generator
             foreach (var gp2 in type.GenericParameters) openSelf.GenericArguments.Add(gp2);
             var invokeRef = invokeRefReturn.GetReference(openSelf);
             var invokeSelfRef = invoke.GetReference(openSelf);
+
+            // Read the cached per-arity flags through the static base accessors.
+            var retcGetter = GetStaticMethodRef(type, "GetReturnCategory", 0);
+            var paramFlagGetter = GetStaticMethodRef(type, "GetParamFlag", 1);
+            if (retcGetter == null || paramFlagGetter == null) return false;
 
             // Clear and rebuild — idempotent by construction.
             body.Instructions.Clear();
@@ -870,25 +1012,24 @@ namespace Generator
                 return gim;
             }
 
-            // Emit a typeof(X) == typeof(Y) comparison; returns the brfalse placeholder
-            // (Cecil 0.10 rejects null targets, so the previous instruction is used as
-            // a temporary target and overwritten by the caller).
-            Instruction EmitTypeCheck(TypeReference genericArg, TypeReference concrete)
+            // Emit a flag comparison: GetParamFlag(i) == expected. Returns the bne.un
+            // placeholder (Cecil 0.10 rejects null targets, so the previous
+            // instruction is the temporary target, overwritten later).
+            Instruction EmitFlagCheck(int paramIndex, int expected)
             {
-                Emit(OpCodes.Ldtoken, genericArg);
-                Emit(OpCodes.Call, getTypeFromHandle);
-                Emit(OpCodes.Ldtoken, concrete);
-                Emit(OpCodes.Call, getTypeFromHandle);
-                Emit(OpCodes.Call, typeOpEquality);
-                var brfalse = Instruction.Create(OpCodes.Brfalse, seq[seq.Count - 1]);
-                seq.Add(brfalse);
-                return brfalse;
+                Emit(OpCodes.Ldc_I4, paramIndex);
+                Emit(OpCodes.Call, paramFlagGetter);
+                Emit(OpCodes.Ldc_I4, expected);
+                var bne = Instruction.Create(OpCodes.Bne_Un, seq[seq.Count - 1]);
+                seq.Add(bne);
+                return bne;
             }
 
             // ---- per-parameter conversion ----
             // brDone targets are backfilled after the loop (each points at the first
             // instruction of the next parameter's segment, or at the branch test).
             var brDoneFixups = new List<(Instruction br, int paramIndex)>();
+            var segStarts = new Instruction[n + 1];
             for (int i = 0; i < n; i++)
             {
                 var gp = type.GenericParameters[1 + i];
@@ -903,10 +1044,13 @@ namespace Generator
                     continue;
                 }
 
-                // if (typeof(Ux) == typeof(ByRefParam)) — pin the byref target, snapshot its address.
-                // ldarg + stloc mirrors Roslyn's fixed prologue; ldloc + conv.u + op_Explicit
-                // bridges the pinned byref bits into the IntPtr struct ConvertParam expects.
-                var brf1 = EmitTypeCheck(gp, byRefParamType);
+                // if (GetRefParamFlag(_ParamFlags, i) == ParamFlag.ByRef) — pin the
+                // byref target (ByRefParam), snapshot its address. ldarg + stloc
+                // mirrors Roslyn's fixed prologue; ldloc + conv.u + op_Explicit
+                // bridges the pinned byref bits into the IntPtr struct.
+                int segStartIdx = seq.Count;   // the ldsfld lands here
+                var brf1 = EmitFlagCheck(i, 2 /* ParamFlag.ByRef */);
+                segStarts[i] = seq[segStartIdx];
                 if (step >= 2)
                 {
                     Emit(OpCodes.Ldarg, pX);
@@ -924,15 +1068,13 @@ namespace Generator
                 var br1 = Instruction.Create(OpCodes.Br, seq[seq.Count - 1]);
                 seq.Add(br1);
 
-                // notBrp anchor: if (typeof(Ux) == typeof(ByRefLocalSlot)) — slot indirect.
-                var notBrpAnchor = Instruction.Create(OpCodes.Ldtoken, gp);
+                // notBrp anchor: flag == ParamFlag.Ref2Ref (ByRefLocalSlot) — slot indirect.
+                var notBrpAnchor = Instruction.Create(OpCodes.Ldc_I4, i);
                 seq.Add(notBrpAnchor);
                 brf1.Operand = notBrpAnchor;
-                Emit(OpCodes.Call, getTypeFromHandle);
-                Emit(OpCodes.Ldtoken, byRefLocalSlotType);
-                Emit(OpCodes.Call, getTypeFromHandle);
-                Emit(OpCodes.Call, typeOpEquality);
-                var brf2 = Instruction.Create(OpCodes.Brfalse, seq[seq.Count - 1]);
+                Emit(OpCodes.Call, paramFlagGetter);
+                Emit(OpCodes.Ldc_I4, 3 /* ParamFlag.Ref2Ref */);
+                var brf2 = Instruction.Create(OpCodes.Bne_Un, seq[seq.Count - 1]);
                 seq.Add(brf2);
                 Emit(OpCodes.Ldarga, pX);
                 Emit(OpCodes.Conv_U);
@@ -953,35 +1095,20 @@ namespace Generator
                 brDoneFixups.Add((br2, i));
             }
 
-            // ---- _ReturnCategory == 2 branch test ----
-            var branchTest = Instruction.Create(OpCodes.Ldarg_0);
+            // ---- _ReturnCategory == ParamFlag.ByRef (2) branch test ----
+            var branchTest = Instruction.Create(OpCodes.Call, retcGetter);
             seq.Add(branchTest);
-            // Backfill the brDone targets: segment i ends right before segment i+1 starts.
+            // Backfill the brDone targets: segment i ends right where segment i+1
+            // starts (or at the branch test for the last segment).
             if (brDoneFixups.Count > 0)
             {
-                int[] segStarts = new int[n + 1];
-                segStarts[0] = 0;
-                {
-                    int seg = 1, idx = 1;
-                    while (seg < n && idx < seq.Count)
-                    {
-                        // each segment i>0 opens with ldtoken !Ui of its own typeof check
-                        if (seq[idx].OpCode == OpCodes.Ldtoken
-                            && seq[idx].Operand == type.GenericParameters[1 + seg])
-                        {
-                            segStarts[seg++] = idx;
-                        }
-                        idx++;
-                    }
-                }
-                segStarts[n] = seq.IndexOf(branchTest);
+                segStarts[n] = branchTest;
                 foreach (var (br, paramIndex) in brDoneFixups)
                 {
-                    br.Operand = seq[segStarts[paramIndex + 1]];
+                    br.Operand = segStarts[paramIndex + 1];
                 }
             }
 
-            Emit(OpCodes.Ldfld, retcField);
             Emit(OpCodes.Ldc_I4_2);
             var bne = Instruction.Create(OpCodes.Bne_Un, seq[seq.Count - 1]);
             seq.Add(bne);
@@ -1041,6 +1168,265 @@ namespace Generator
             var il = body.GetILProcessor();
             foreach (var inst in seq) il.Append(inst);
             return true;
+        }
+
+        /// <summary>
+        /// Rebuilds the private generic core Invoke&lt;P1..Pn&gt;(out R r, in P1 p1, ..., in Pn pn)
+        /// of every ActionRefInvoker/FuncRefInvoker/RefFuncRefInvoker (EX and non-EX
+        /// families). The woven body:
+        ///   - prologue: ldarg.0; ldfld _Del (the typed delegate field);
+        ///   - every slot parameter: ldarga pX; conv.u; IntPtr::op_Explicit(void*);
+        ///     newobj ByRefLocalSlot::.ctor(IntPtr) — a slot-indirect wrapper over this
+        ///     frame's own argument slot (the byref inside the slot stays GC-tracked,
+        ///     so the callee keeps following heap compaction — no address snapshot,
+        ///     no pin);
+        ///   - the EX family's last parameter: ldarg; ldobj; ConvertParam&lt;!Pex, !EX&gt; —
+        ///     bit-pattern reinterpretation of the method generic parameter into the
+        ///     class's EX (identical types at every wrapper call site, so a plain
+        ///     value copy that satisfies the verifier);
+        ///   - callvirt the delegate's Invoke;
+        ///   - epilogue: Action → r = default; return ref r. Func → r = result;
+        ///     return ref r. RefFunc → r = *resultRef; return the delegate's byref.
+        /// Idempotent (the body is cleared and re-emitted, so re-running the
+        /// Generator on an already-woven dll is safe).
+        /// </summary>
+        static void InjectRefInvokerBodies(AssemblyDefinition asm)
+        {
+            var module = asm.MainModule;
+            var baseType = module.GetType("Mod.LowLevel.FreeInvokableBase");
+
+            // ConvertParam<P, U>(P p) — the 1-arg bit-reinterpretation overload.
+            var convertParam = baseType.Methods.Single(m =>
+                m.Name == "ConvertParam" && m.GenericParameters.Count == 2
+                && m.Parameters.Count == 1);
+
+            // IntPtr::op_Explicit(void*) — reuse the C#-compiler-written reference
+            // from ConvertRefToAddress's IL (never ImportReference(typeof(...)) —
+            // see the note in RebuildInvokeFallbackBodies).
+            MethodReference intPtrOpExplicit = null;
+            var convRefToAddress = baseType.Methods.Single(m =>
+                m.Name == "ConvertRefToAddress" && m.GenericParameters.Count == 1
+                && m.Parameters.Count == 1);
+            foreach (var inst in convRefToAddress.Body.Instructions)
+            {
+                if (inst.OpCode == OpCodes.Call
+                    && inst.Operand is MethodReference mr && mr.Name == "op_Explicit")
+                {
+                    intPtrOpExplicit = mr;
+                    break;
+                }
+            }
+
+            // ByRefLocalSlot::.ctor(IntPtr) — read straight from the compiled dll
+            // (the parameter's IntPtr reference is Roslyn-written, so it is safe
+            // for every target runtime).
+            var slotType = module.GetType("Mod.LowLevel.ByRefLocalSlot");
+            var slotCtor = slotType.Methods.Single(m =>
+                m.IsConstructor && m.Parameters.Count == 1);
+
+            int patched = 0, skipped = 0;
+            var invokeTemplates = new Dictionary<string, MethodReference>();
+            foreach (var type in module.Types)
+            {
+                if (type.Namespace != "Mod.LowLevel") continue;
+                if (!type.Name.StartsWith("ActionRefInvoker")
+                    && !type.Name.StartsWith("FuncRefInvoker")
+                    && !type.Name.StartsWith("RefFuncRefInvoker")) continue;
+                foreach (var method in type.Methods)
+                {
+                    // The private generic core Invoke — NOT the public wrappers
+                    // (public, plain returns) and NOT the explicit interface
+                    // implementations (method.Overrides is non-empty).
+                    if (method.Name != "Invoke") continue;
+                    if (!method.IsPrivate || method.Overrides.Count > 0) continue;
+                    if (!method.HasBody || !method.HasGenericParameters) continue;
+                    if (!method.ReturnType.IsByReference) continue;
+                    if (method.Parameters.Count < 2) continue;
+                    if (InjectRefInvokerBody(method, type, module, convertParam,
+                        intPtrOpExplicit, slotCtor, invokeTemplates)) patched++;
+                    else skipped++;
+                }
+            }
+            Console.WriteLine($"RefInvoker rebuild: {patched} methods rebuilt, {skipped} skipped");
+        }
+
+        static bool InjectRefInvokerBody(MethodDefinition method, TypeDefinition type,
+            ModuleDefinition module, MethodDefinition convertParam,
+            MethodReference intPtrOpExplicit, MethodReference slotCtor,
+            Dictionary<string, MethodReference> invokeTemplates)
+        {
+            var body = method.Body;
+            int n = method.Parameters.Count - 1;    // in-param count (param 0 = `out R r`)
+            var rOut = method.Parameters[0];
+
+            // EX family: the class's LAST generic parameter is EX
+            // (ActionRefInvoker1<EX> / FuncRefInvoker1<R, EX> / RefFuncRefInvoker1<R, EX>);
+            // the non-EX families have no EX parameter (their last class param is R,
+            // or they have none). The EX parameter is the method's last `in` param.
+            bool isExFamily = type.GenericParameters.Count > 0
+                && type.GenericParameters[type.GenericParameters.Count - 1].Name == "EX";
+            int slotCount = isExFamily ? n - 1 : n;
+            if (slotCount < 0) return false;
+
+            // The typed delegate field and its Invoke reference.
+            var delField = type.GetField("_Del");
+            if (delField == null) return false;
+            if (!(delField.FieldType is GenericInstanceType delType)) return false;
+            var delInvokeRef = MakeDelegateInvokeRef(module, delType, invokeTemplates);
+            if (delInvokeRef == null) return false;
+
+            bool isActionFamily = type.Name.StartsWith("ActionRefInvoker");
+            bool isRefFuncFamily = type.Name.StartsWith("RefFuncRefInvoker");
+            var typeR = ((ByReferenceType)method.ReturnType).ElementType;
+
+            // Clear and rebuild — idempotent by construction.
+            body.Instructions.Clear();
+            body.Variables.Clear();
+            body.ExceptionHandlers.Clear();
+
+            var seq = new List<Instruction>();
+            void Emit(OpCode op, object operand = null)
+            {
+                Instruction inst;
+                if (operand == null) inst = Instruction.Create(op);
+                else if (operand is ParameterDefinition p) inst = Instruction.Create(op, p);
+                else if (operand is VariableDefinition v) inst = Instruction.Create(op, v);
+                else if (operand is TypeReference t) inst = Instruction.Create(op, t);
+                else if (operand is MethodReference m) inst = Instruction.Create(op, m);
+                else if (operand is FieldReference f) inst = Instruction.Create(op, f);
+                else inst = Instruction.Create(op, (int)operand);
+                seq.Add(inst);
+            }
+
+            // this._Del. For fields declared on a generic wrapper, the ldfld operand
+            // must be a MemberRef whose declaring type is the open self TypeSpec
+            // FuncRefInvokerN<!R> / RefFuncRefInvokerN<!R>. A raw FieldDef works on
+            // the JIT but makes NativeAOT/ILC fail to import the generic type.
+            Emit(OpCodes.Ldarg_0);
+            FieldReference delFieldRef = delField;
+            if (type.HasGenericParameters)
+            {
+                var openSelf = new GenericInstanceType(type);
+                foreach (var gp in type.GenericParameters)
+                    openSelf.GenericArguments.Add(gp);
+                delFieldRef = new FieldReference(delField.Name, delField.FieldType, openSelf);
+            }
+            Emit(OpCodes.Ldfld, delFieldRef);
+
+            // Slot params: ldarga pX; conv.u; op_Explicit(void*); newobj ByRefLocalSlot(IntPtr).
+            for (int i = 0; i < slotCount; i++)
+            {
+                Emit(OpCodes.Ldarga, method.Parameters[1 + i]);
+                Emit(OpCodes.Conv_U);
+                Emit(OpCodes.Call, intPtrOpExplicit);
+                Emit(OpCodes.Newobj, slotCtor);
+            }
+
+            // EX param: ldarg; ldobj; ConvertParam<!Pex, !EX>. The generic param is
+            // taken from the method's own generic parameter list (the last one —
+            // the parameter types of `in` params carry modreqs that Cecil 0.10
+            // does not model, so they must not be inspected). At every wrapper
+            // call site Pex == EX, so the bit reinterpretation is a plain copy.
+            if (isExFamily)
+            {
+                var pEx = method.Parameters[method.Parameters.Count - 1];
+                var gpEx = method.GenericParameters[method.GenericParameters.Count - 1];
+                var exParam = type.GenericParameters[type.GenericParameters.Count - 1];
+                Emit(OpCodes.Ldarg, pEx);
+                Emit(OpCodes.Ldobj, gpEx);
+                var gim = new GenericInstanceMethod(convertParam);
+                gim.GenericArguments.Add(gpEx);
+                gim.GenericArguments.Add(exParam);
+                Emit(OpCodes.Call, gim);
+            }
+
+            // callvirt _Del.Invoke(slots..., [EX])
+            Emit(OpCodes.Callvirt, delInvokeRef);
+
+            // Epilogue per family.
+            if (isActionFamily)
+            {
+                // r = default; return ref r
+                Emit(OpCodes.Ldarg, rOut);
+                Emit(OpCodes.Initobj, typeR);
+                Emit(OpCodes.Ldarg, rOut);
+                Emit(OpCodes.Ret);
+            }
+            else if (isRefFuncFamily)
+            {
+                // resRef = the delegate's byref; r = *resRef; return resRef
+                var resRef = new VariableDefinition(new ByReferenceType(typeR));
+                body.Variables.Add(resRef);
+                Emit(OpCodes.Stloc, resRef);
+                Emit(OpCodes.Ldarg, rOut);
+                Emit(OpCodes.Ldloc, resRef);
+                Emit(OpCodes.Ldobj, typeR);
+                Emit(OpCodes.Stobj, typeR);
+                Emit(OpCodes.Ldloc, resRef);
+                Emit(OpCodes.Ret);
+            }
+            else
+            {
+                // res = the delegate result; r = res; return ref r
+                var res = new VariableDefinition(typeR);
+                body.Variables.Add(res);
+                Emit(OpCodes.Stloc, res);
+                Emit(OpCodes.Ldarg, rOut);
+                Emit(OpCodes.Ldloc, res);
+                Emit(OpCodes.Stobj, typeR);
+                Emit(OpCodes.Ldarg, rOut);
+                Emit(OpCodes.Ret);
+            }
+
+            body.MaxStackSize = Math.Max(body.MaxStackSize, slotCount + 3);
+            var il = body.GetILProcessor();
+            foreach (var inst in seq) il.Append(inst);
+            return true;
+        }
+
+        /// <summary>
+        /// Builds the callvirt Invoke reference for a typed delegate field
+        /// (e.g. Action&lt;ByRefLocalSlot, !EX&gt;) without resolving any netstandard
+        /// type: the dll's own FreeFunc Invoke bodies already contain callvirt
+        /// sites on every Action`n / Func`n / RefFunc`n arity, and a MemberRef's
+        /// signature is expressed in the DELEGATE's own generic parameters —
+        /// identical for every instantiation — so an existing site is reused as
+        /// the template and only the declaring instantiation is replaced.
+        /// </summary>
+        static MethodReference MakeDelegateInvokeRef(ModuleDefinition module,
+            GenericInstanceType delType, Dictionary<string, MethodReference> invokeTemplates)
+        {
+            var elemName = delType.ElementType.FullName;
+            var key = elemName + "/" + delType.GenericArguments.Count;
+            if (invokeTemplates.TryGetValue(key, out var template))
+            {
+                return CloneInvokeRef(template, delType);
+            }
+            foreach (var type in module.Types)
+            {
+                foreach (var method in type.Methods)
+                {
+                    if (!method.HasBody) continue;
+                    foreach (var inst in method.Body.Instructions)
+                    {
+                        if (inst.OpCode != OpCodes.Callvirt) continue;
+                        if (!(inst.Operand is MethodReference mr) || mr.Name != "Invoke") continue;
+                        if (!(mr.DeclaringType is GenericInstanceType git)) continue;
+                        if (git.ElementType.FullName != elemName) continue;
+                        if (git.GenericArguments.Count != delType.GenericArguments.Count) continue;
+                        invokeTemplates[key] = mr;
+                        return CloneInvokeRef(mr, delType);
+                    }
+                }
+            }
+            return null;
+        }
+
+        static MethodReference CloneInvokeRef(MethodReference template, GenericInstanceType delType)
+        {
+            var mref = new MethodReference(template.Name, template.ReturnType, delType) { HasThis = true };
+            foreach (var p in template.Parameters) mref.Parameters.Add(p);
+            return mref;
         }
 
         /// <summary>

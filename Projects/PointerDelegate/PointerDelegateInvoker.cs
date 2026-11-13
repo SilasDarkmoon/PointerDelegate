@@ -2,6 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
+// netstandard2.0 polyfill for the .NET 7+ UnscopedRefAttribute: the woven
+// InvokeFallback bodies return refs into the caller's frame (the out r slot /
+// the InvokeRefReturn byref), so the C#-level throw placeholders must declare
+// the calling-method escape scope the real IL provides.
+namespace System.Diagnostics.CodeAnalysis
+{
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Parameter, Inherited = false)]
+    internal sealed class UnscopedRefAttribute : Attribute { }
+}
+
 namespace Mod.LowLevel
 {
     public enum ParamFlag
@@ -9,34 +19,13 @@ namespace Mod.LowLevel
         Void = 0,
         ByValue = 1,
         ByRef = 2,
+        Ref2Ref = 3,
     }
     public interface IFreeInvokable
     {
-        void SetParamFlag(int index, ParamFlag flag);
-        ParamFlag GetParamFlag(int index);
-    }
-    public static partial class FreeInvokable
-    {
-        public static F WithRefParam<F>(this F func, int index, bool isref = true) where F : IFreeInvokable
-        {
-            func.SetParamFlag(index, isref ? ParamFlag.ByRef : ParamFlag.ByValue);
-            return func;
-        }
-        public static F WithRefReturn<F>(this F func, bool isref = true) where F : IFreeInvokable
-        {
-            if (isref)
-            {
-                func.SetParamFlag(-1, ParamFlag.ByRef);
-            }
-            else
-            {
-                if (func.GetParamFlag(-1) == ParamFlag.ByRef)
-                {
-                    func.SetParamFlag(-1, ParamFlag.ByValue);
-                }
-            }
-            return func;
-        }
+        // methods below should be static methods. and should be readonly that  should not be modified outside cctor.
+        //void SetParamFlag(int index, ParamFlag flag);
+        //ParamFlag GetParamFlag(int index);
     }
     #region IFreeInvokableFunc
     public interface IFreeInvokableFunc<R> : IFreeInvokable
